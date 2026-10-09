@@ -77,11 +77,11 @@ function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1040,
     height: 720,
-    minWidth: 720,
+    minWidth: 760,
     minHeight: 520,
     show: false,
     title: 'Print Me Daddy',
-    backgroundColor: '#121016',
+    backgroundColor: '#0f0d12',
     icon: join(assetsDir, 'icon', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: { preload: preloadPath, sandbox: true, contextIsolation: true }

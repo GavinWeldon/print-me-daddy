@@ -15,3 +15,6 @@ Thumbs.db
 # Never commit secrets (this app has none, keep it that way)
 .env
 .env.*
+
+# Local design previews
+.preview/

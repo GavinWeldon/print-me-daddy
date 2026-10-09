@@ -24,7 +24,19 @@ Print Me Daddy contains **no API keys and no accounts**. For tricky requests it 
 
 ## Swap Paige's artwork
 
-Pictures live in [`assets/host`](assets/host): `idle`, `thinking`, `printing` and `error`, as `.svg`, `.png`, `.gif`, `.webp` or `.jpg`. Replace a file with your own picture (same name), then click back into the app. No code changes needed. Type `/mood thinking` (or `idle`, `printing`, `error`) in the chat to preview each one.
+Pictures live in [`assets/host`](assets/host): `idle`, `thinking`, `printing` and `error`, as `.svg`, `.png`, `.gif`, `.webp` or `.jpg` (portrait, 3:4). Replace a file with your own picture (same name), then click back into the app. No code changes needed. Type `/mood thinking` (or `idle`, `printing`, `error`) in the chat to preview each one.
+
+Want a realistic painted Paige? See [docs/paige-art-prompts.md](docs/paige-art-prompts.md) for ready-made image-generator prompts.
+
+## Artwork scripts
+
+The placeholder artwork is drawn by code, so it can be tweaked and regenerated:
+
+```bash
+npm run paige    # assets/host/*.svg   (scripts/make-paige.mjs)
+npm run logo     # assets/brand/logo.svg (scripts/make-logo.mjs, uses the free Knewave font)
+npm run icons    # assets/icon/*.png   (scripts/make-icons.mjs)
+```
 
 ## Development
 

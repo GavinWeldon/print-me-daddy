@@ -14,9 +14,12 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit --composite false -p tsconfig.node.json && tsc --noEmit --composite false -p tsconfig.web.json",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "logo": "node scripts/make-logo.mjs",
+    "paige": "node scripts/make-paige.mjs"
   },
   "dependencies": {
+    "@fontsource/knewave": "5.3.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -27,6 +30,7 @@
     "@vitejs/plugin-react": "5.2.0",
     "electron": "44.7.0",
     "electron-vite": "5.0.0",
+    "opentype.js": "2.0.0",
     "typescript": "6.0.3",
     "vite": "7.3.7"
   },

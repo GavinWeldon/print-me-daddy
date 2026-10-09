@@ -4,8 +4,9 @@ import { Host } from './components/Host'
 import { MessageList } from './components/MessageList'
 import { Composer } from './components/Composer'
 import { SettingsPanel } from './components/SettingsPanel'
+import logoUrl from '../../../assets/brand/logo.svg'
 
-/** The full window: chat on the left, the host in the bottom-right corner. */
+/** The full window: a poster column (host + logo) on the left, chat on the right. */
 export default function App() {
   const chat = useChat()
   const settings = useSettings()
@@ -48,25 +49,23 @@ export default function App() {
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-dot" />
-          Print Me <em>Daddy</em>
-        </div>
-        <button className="icon-btn" onClick={() => setSettingsOpen(true)} title="Settings">
-          ⚙
-        </button>
-      </header>
+      <aside className="poster">
+        <Host name={hostName} state={chat.hostState} avatars={avatars} />
+        <img className="logo" src={logoUrl} alt="Print Me Daddy" draggable={false} />
+      </aside>
 
-      <main className="layout">
-        <section className="chat">
-          <MessageList messages={chat.messages} hostName={hostName} typing={chat.hostState === 'thinking'} />
-          <Composer hostName={hostName} onSend={(t) => window.pmd.sendMessage(t)} />
-        </section>
-        <aside className="host-corner">
-          <Host name={hostName} state={chat.hostState} avatars={avatars} />
-        </aside>
-      </main>
+      <section className="chat">
+        <header className="chat-head">
+          <h1>
+            Chat with <span>{hostName}</span>
+          </h1>
+          <button className="icon-btn" onClick={() => setSettingsOpen(true)} title="Settings">
+            ⚙
+          </button>
+        </header>
+        <MessageList messages={chat.messages} hostName={hostName} typing={chat.hostState === 'thinking'} />
+        <Composer hostName={hostName} onSend={(t) => window.pmd.sendMessage(t)} />
+      </section>
 
       <div className="drop-overlay" aria-hidden={!dragging}>
         <div className="drop-card">

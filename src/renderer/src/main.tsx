@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import QuickBar from './QuickBar'
+import '@fontsource/knewave'
 import './styles.css'
 
 // The same screen code powers both windows; "#quick" means the pop-up bar.
