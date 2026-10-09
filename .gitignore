@@ -1,0 +1,17 @@
+# Installed packages (re-created by `npm install`)
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Logs and OS junk
+*.log
+.DS_Store
+Thumbs.db
+
+# Never commit secrets (this app has none, keep it that way)
+.env
+.env.*

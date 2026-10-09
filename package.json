@@ -1,0 +1,37 @@
+{
+  "name": "print-me-daddy",
+  "productName": "Print Me Daddy",
+  "version": "0.1.0",
+  "description": "A cheeky chat window for printing things fast, hosted by Paige.",
+  "main": "./out/main/index.js",
+  "author": "Gav Weldon",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "postinstall": "install-electron",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit --composite false -p tsconfig.node.json && tsc --noEmit --composite false -p tsconfig.web.json",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "44.7.0",
+    "electron-vite": "5.0.0",
+    "typescript": "6.0.3",
+    "vite": "7.3.7"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
+  }
+}
