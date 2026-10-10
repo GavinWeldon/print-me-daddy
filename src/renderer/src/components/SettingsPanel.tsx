@@ -4,6 +4,7 @@ import { HotkeyInput } from './HotkeyInput'
 import { PrinterSelect } from './PrinterSelect'
 import { useIndexStatus, usePaperSizes } from '../hooks'
 import { PrintOptionsFields } from './PrintOptionsFields'
+import { PrinterFeatures } from './PrinterFeatures'
 
 interface Props {
   settings: Settings
@@ -85,6 +86,7 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
           </button>
           {advanced && (
             <div className="advanced">
+              <h3 className="sub-head">Print Me Daddy defaults</h3>
               <small>
                 Every new print job starts with these. Anything you type (like “in black and white”) or change on a job
                 still wins.
@@ -97,10 +99,10 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
                   openMore
                 />
               </div>
-              <small>
-                Quality, paper type, borderless and other printer-specific settings live in your printer’s own Windows
-                settings. Whatever you set there becomes its default here too.
-              </small>
+              <h3 className="sub-head">Your printer’s own settings</h3>
+              <small>Quality, paper type, borderless, ink and everything else this printer offers.</small>
+              <PrinterFeatures printerName={settings.printerName} />
+              <small>Prefer Windows’ own windows? These open them:</small>
               <div className="row wrap">
                 <button className="ghost-btn small" onClick={() => window.pmd.openPrinterWindow(settings.printerName, 'preferences')}>
                   Printing preferences

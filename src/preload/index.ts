@@ -35,6 +35,8 @@ const api: PmdApi = {
   printTestPage: (printerName) => ipcRenderer.invoke('print:test-page', printerName),
   getPaperSizes: (printerName) => ipcRenderer.invoke('printers:paper-sizes', printerName),
   openPrinterWindow: (printerName, which) => ipcRenderer.invoke('printers:open-window', printerName, which),
+  getPrinterFeatures: (printerName, refresh) => ipcRenderer.invoke('printers:features', printerName, refresh),
+  setPrinterFeature: (printerName, feature, option) => ipcRenderer.invoke('printers:set-feature', printerName, feature, option),
 
   pickFolders: () => ipcRenderer.invoke('library:pick-folders'),
   getIndexStatus: () => ipcRenderer.invoke('library:status'),

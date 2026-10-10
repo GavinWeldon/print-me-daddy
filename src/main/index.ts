@@ -8,6 +8,7 @@ import { prettyHotkey } from '../shared/hotkey'
 import { PrintDesk } from './print/desk'
 import { listPrinters, openPrinterWindow, paperSizes, resolvePrinter } from './print/printers'
 import { applyOptions } from '../shared/options'
+import { readPrinterFeatures, writePrinterFeature } from './print/capabilities'
 import { cleanScratch } from './print/documents'
 import { Library } from './library/library'
 import { Assistant } from './brain/assistant'
@@ -335,6 +336,25 @@ function registerIpc(): void {
   ipcMain.handle('printers:open-window', async (_e, printer: unknown, which: unknown) => {
     const target = await resolvePrinter(typeof printer === 'string' ? printer : null)
     if ('name' in target && (which === 'preferences' || which === 'properties' || which === 'queue')) openPrinterWindow(target.name, which)
+  })
+  ipcMain.handle('printers:features', async (_e, printer: unknown, refresh: unknown) => {
+    const target = await resolvePrinter(typeof printer === 'string' ? printer : null)
+    if ('error' in target) return { error: target.error }
+    try {
+      return { printer: target.name, features: await readPrinterFeatures(target.name, refresh === true) }
+    } catch (e) {
+      return { error: `Couldn't read this printer's settings (${e instanceof Error ? e.message : e}).` }
+    }
+  })
+  ipcMain.handle('printers:set-feature', async (_e, printer: unknown, feature: unknown, option: unknown) => {
+    const target = await resolvePrinter(typeof printer === 'string' ? printer : null)
+    if ('error' in target) return { ok: false, error: target.error }
+    if (typeof feature !== 'string' || typeof option !== 'string') return { ok: false, error: 'Bad setting.' }
+    try {
+      return { ok: true, kept: await writePrinterFeature(target.name, feature, option) }
+    } catch (e) {
+      return { ok: false, error: `The printer didn't accept that (${e instanceof Error ? e.message : e}).` }
+    }
   })
   ipcMain.handle('print:test-page', (_e, printer: unknown) => desk.testPage(typeof printer === 'string' ? printer : null))
 

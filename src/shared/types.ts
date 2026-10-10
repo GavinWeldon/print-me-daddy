@@ -118,6 +118,18 @@ export interface PrintJob {
   compact?: boolean
 }
 
+/** One of the printer's own settings (quality, paper type…), read from Windows. */
+export interface PrinterFeature {
+  /** Internal name, e.g. "psk:PageOutputQuality". */
+  name: string
+  label: string
+  /** Everyday settings shown first. */
+  common: boolean
+  /** Currently chosen option name ('' if unknown). */
+  current: string
+  options: { name: string; label: string }[]
+}
+
 // ---------- Folder index ----------
 
 export interface IndexStatus {
@@ -195,6 +207,10 @@ export interface PmdApi {
   getPaperSizes(printerName: string | null): Promise<string[]>
   /** Opens one of Windows' own windows for a printer. */
   openPrinterWindow(printerName: string | null, which: 'preferences' | 'properties' | 'queue'): Promise<void>
+  /** The printer's own changeable settings. */
+  getPrinterFeatures(printerName: string | null, refresh?: boolean): Promise<{ printer: string; features: PrinterFeature[] } | { error: string }>
+  /** Saves one of the printer's own settings; returns the option it kept. */
+  setPrinterFeature(printerName: string | null, feature: string, option: string): Promise<{ ok: boolean; kept?: string; error?: string }>
 
   /** Opens a folder picker; returns the chosen folders (empty if cancelled). */
   pickFolders(): Promise<string[]>
