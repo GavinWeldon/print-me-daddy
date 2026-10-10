@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from 'electron'
 import { join } from 'path'
 import { SettingsStore } from './settings'
 import { Chat } from './chat'
@@ -8,6 +8,10 @@ import { prettyHotkey } from '../shared/hotkey'
 import { PrintDesk } from './print/desk'
 import { listPrinters } from './print/printers'
 import { cleanScratch } from './print/documents'
+import { Library } from './library/library'
+import { Assistant } from './brain/assistant'
+import { rankFiles } from './brain/fastPath'
+import { existsSync, statSync } from 'fs'
 import { HOST_STATES, type HostState, type JobPatch, type Settings, type SettingsUpdateResult } from '../shared/types'
 
 // Where artwork lives: the project's assets folder while developing,
@@ -22,6 +26,8 @@ const startHidden = process.argv.includes('--hidden')
 let settings: SettingsStore
 let chat: Chat
 let desk: PrintDesk
+let library: Library
+let assistant: Assistant
 let mainWindow: BrowserWindow | null = null
 let quickWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -42,6 +48,14 @@ function start(): void {
   settings = new SettingsStore()
   chat = new Chat((state) => broadcast('chat:changed', state))
   desk = new PrintDesk(chat, settings)
+  library = new Library()
+  library.on('status', (status) => broadcast('library:status', status))
+  library.setFolders(settings.get().sourceFolders)
+  desk.folderOf = (path) => library.list().find((f) => f.path === path)?.folder
+  assistant = new Assistant(chat, desk, library, settings, (jobId) => {
+    showMain()
+    mainWindow?.webContents.send('job:confirm', jobId)
+  })
   cleanScratch()
   listPrinters().catch(() => {}) // warm up the printer list in the background
 
@@ -215,6 +229,15 @@ function updateSettings(patch: Partial<Settings>): SettingsUpdateResult {
   }
   if (typeof patch.startWithWindows === 'boolean') next.startWithWindows = patch.startWithWindows
   if (patch.printerName === null || typeof patch.printerName === 'string') next.printerName = patch.printerName
+  if (typeof patch.quickMode === 'boolean') next.quickMode = patch.quickMode
+  if (typeof patch.quickModePageLimit === 'number' && Number.isFinite(patch.quickModePageLimit)) {
+    next.quickModePageLimit = Math.min(500, Math.max(1, Math.round(patch.quickModePageLimit)))
+  }
+  if (Array.isArray(patch.sourceFolders)) {
+    // Only real folders, no duplicates.
+    const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory()
+    next.sourceFolders = [...new Set(patch.sourceFolders.filter((p): p is string => typeof p === 'string' && isDir(p)))].slice(0, 20)
+  }
 
   if (typeof patch.hotkey === 'string' && patch.hotkey !== prev.hotkey) {
     if (hotkeyActive) globalShortcut.unregister(prev.hotkey)
@@ -228,6 +251,7 @@ function updateSettings(patch: Partial<Settings>): SettingsUpdateResult {
   }
 
   settings.set(next)
+  if (JSON.stringify(next.sourceFolders) !== JSON.stringify(prev.sourceFolders)) library.setFolders(next.sourceFolders)
   if (next.startWithWindows !== prev.startWithWindows) applyStartWithWindows(next.startWithWindows)
   refreshTray()
   broadcast('settings:changed', next)
@@ -258,9 +282,11 @@ async function handleUserMessage(raw: unknown): Promise<void> {
   }
 
   chat.setHostState('thinking')
-  await wait(600 + Math.random() * 500)
-  chat.add('host', host.placeholderReply(text))
-  chat.setHostState('idle')
+  try {
+    await Promise.all([assistant.handle(text), wait(500)]) // a beat, so it feels like she's thinking
+  } finally {
+    if (chat.get().hostState === 'thinking') chat.setHostState('idle')
+  }
 }
 
 function registerIpc(): void {
@@ -279,6 +305,16 @@ function registerIpc(): void {
   ipcMain.handle('job:update', (_e, id: unknown, patch: unknown) => desk.update(String(id), (patch ?? {}) as JobPatch))
   ipcMain.handle('job:print', (_e, id: unknown, confirmed: unknown) => desk.print(String(id), confirmed === true))
   ipcMain.handle('job:cancel', (_e, id: unknown) => desk.cancel(String(id)))
+  ipcMain.handle('library:status', () => library.status())
+  ipcMain.handle('library:pick-folders', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, { title: 'Where do your documents live?', properties: ['openDirectory', 'multiSelections'] })
+    return result.canceled ? [] : result.filePaths
+  })
+  ipcMain.handle('library:search', (_e, query: unknown) =>
+    rankFiles(String(query ?? '').slice(0, 200), library.list())
+      .slice(0, 8)
+      .map(({ file }) => ({ path: file.path, name: file.name, folder: file.folder }))
+  )
   ipcMain.handle('print:test-page', (_e, printer: unknown) => desk.testPage(typeof printer === 'string' ? printer : null))
 
   // The loading screen waits until the main window is really open (not just "visible" to the browser engine).

@@ -13,13 +13,60 @@ export function greeting(name: string): string {
   ])
 }
 
-export function placeholderReply(text: string): string {
-  const short = text.length > 60 ? text.slice(0, 57) + '...' : text
+export function chitChat(): string {
   return pick([
-    `"${short}"? Love the ambition. I can't find files by name just yet, so drag them onto me and I'll print them right now. 😉`,
-    `I'm still learning to read your mind, darling. For now, drop the files on me and I'll handle the rest. 💅`,
-    `Typing requests is coming in my next update. Drag and drop me something in the meantime?`
+    `Flattered you want to chat, but I'm a printing girl. Tell me what to print, or drop a file on me. 😉`,
+    `Mm, small talk. Cute. My big brain arrives in the next update; for now, tell me a file to print.`,
+    `I only have eyes for your documents right now, darling. What are we printing?`
   ])
+}
+
+export function needFolders(): string {
+  return `I don't know where your files live yet, darling. Open ⚙ Settings, add your document folders, then ask me again. (Or just drop the files on me.)`
+}
+
+export function stillIndexing(): string {
+  return `Still flicking through your folders, gorgeous. Give me a moment and ask again.`
+}
+
+export function nothingMentioned(): string {
+  return `Print what, gorgeous? Give me a file name, like "print my CV".`
+}
+
+export function notFound(chunks: string[]): string {
+  return `I couldn't find anything like ${chunks.map((c) => `"${c}"`).join(' or ')} in your folders. Check the spelling, or drop the file on me.`
+}
+
+export function tooComplex(): string {
+  return `Ooh, that one needs my big brain, and she arrives in the next update. For now, tell me the files one by one ("print x, then y"), or drop them on me.`
+}
+
+export function mergeLater(): string {
+  return `Stitching them into one PDF comes in a later update, so I'll print them one after another in that order instead.`
+}
+
+/** "2 copies, black & white, double-sided" */
+export function describeOptions(o: { copies: number; color: string; duplex: string; pages: string; pagesPerSheet: number }): string {
+  const parts: string[] = []
+  if (o.copies > 1) parts.push(`${o.copies} copies`)
+  parts.push(o.color === 'mono' ? 'black & white' : 'colour')
+  if (o.duplex === 'long') parts.push('double-sided')
+  if (o.duplex === 'short') parts.push('double-sided (short edge)')
+  if (o.pages.trim()) parts.push(`pages ${o.pages}`)
+  if (o.pagesPerSheet > 1) parts.push(`${o.pagesPerSheet} per sheet`)
+  return parts.join(', ')
+}
+
+const ordered = (names: string[]) => (names.length > 4 ? `${names.slice(0, 3).join(', then ')} and ${names.length - 3} more` : names.join(', then '))
+
+export function quickPrint(names: string[], settings: string): string {
+  return pick([`On it: ${ordered(names)}. ${settings}. 💋`, `Coming right up: ${ordered(names)}, ${settings}.`])
+}
+
+export function planReady(names: string[], settings: string, unsure: boolean): string {
+  return unsure
+    ? `Here's my best guess: ${ordered(names)}, ${settings}. I wasn't sure about everything, so check the list before you hit Print.`
+    : `Here's the plan: ${ordered(names)}, ${settings}. Hit Print when you're ready.`
 }
 
 const list = (names: string[]) => (names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', '))

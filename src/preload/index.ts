@@ -27,9 +27,15 @@ const api: PmdApi = {
 
   listPrinters: (refresh) => ipcRenderer.invoke('printers:list', refresh),
   updateJob: (jobId, patch) => ipcRenderer.invoke('job:update', jobId, patch),
+  onConfirmJob: (cb) => listen('job:confirm', cb),
+  searchFiles: (query) => ipcRenderer.invoke('library:search', query),
   printJob: (jobId, confirmed) => ipcRenderer.invoke('job:print', jobId, confirmed),
   cancelJob: (jobId) => ipcRenderer.invoke('job:cancel', jobId),
   printTestPage: (printerName) => ipcRenderer.invoke('print:test-page', printerName),
+
+  pickFolders: () => ipcRenderer.invoke('library:pick-folders'),
+  getIndexStatus: () => ipcRenderer.invoke('library:status'),
+  onIndexStatus: (cb) => listen('library:status', cb),
 
   openMain: (opts) => ipcRenderer.send('window:open-main', opts),
   onOpenSettings: (cb) => listen('ui:open-settings', cb),

@@ -1,11 +1,11 @@
 import { app } from 'electron'
 import { randomUUID } from 'crypto'
 import { rmSync } from 'fs'
-import { basename } from 'path'
+import { basename, dirname } from 'path'
 import type { Chat } from '../chat'
 import type { SettingsStore } from '../settings'
 import * as host from '../host/personality'
-import { DEFAULT_PRINT_OPTIONS, type JobFile, type JobPatch, type PrintJob, type PrintResult } from '../../shared/types'
+import { DEFAULT_PRINT_OPTIONS, type FileHit, type JobFile, type JobPatch, type PrintJob, type PrintOptions, type PrintResult } from '../../shared/types'
 import { countPages, kindOf } from './documents'
 import { resolvePrinter } from './printers'
 import { CancelledError, jobPageTotal, PAGE_RANGES, printFile, removeFromQueue, runJob } from './runner'
@@ -28,26 +28,29 @@ export class PrintDesk {
   private cancelRequested = new Set<string>()
   private running = new Map<string, { printer: string; sent: string[]; since: Date }>()
 
+  /** Looks up a file's folder in the index, for nicer labels (set by the main process). */
+  folderOf?: (path: string) => string | undefined
+
   constructor(
     private readonly chat: Chat,
     private readonly settings: SettingsStore
   ) {}
 
-  /** Files dropped on the window become a job card (Office and unknown files get a friendly note). */
-  async filesDropped(paths: string[]): Promise<void> {
-    const office: string[] = []
-    const unknown: string[] = []
-    const files: JobFile[] = []
-    for (const path of paths) {
+  /** Turns paths into job files with page counts; files that can't print are marked with the reason. */
+  async prepareFiles(items: { path: string; note?: string; folder?: string; alternatives?: FileHit[] }[]): Promise<JobFile[]> {
+    const files: JobFile[] = items.map(({ path, note, folder, alternatives }) => {
       const kind = kindOf(path)
-      if (kind === 'office') office.push(basename(path))
-      else if (kind === 'unsupported') unknown.push(basename(path))
-      else files.push({ id: randomUUID(), path, name: basename(path), pages: null, included: true })
-    }
-
-    this.chat.setHostState('thinking')
+      const problem =
+        kind === 'office'
+          ? 'Word, PowerPoint and Excel printing arrives in a later update.'
+          : kind === 'unsupported'
+            ? 'I can’t print this kind of file.'
+            : undefined
+      return { id: randomUUID(), path, name: basename(path), pages: null, included: !problem, problem, note, folder: folder ?? basename(dirname(path)), alternatives }
+    })
     await Promise.all(
       files.map(async (f) => {
+        if (f.problem) return
         f.pages = await countPages(f.path)
         if (f.pages === null) {
           f.problem = 'Couldn’t open this PDF. It may be damaged or password-protected.'
@@ -55,26 +58,54 @@ export class PrintDesk {
         }
       })
     )
+    return files
+  }
+
+  /** Adds a job to the chat under Paige's message. Compact jobs show as a one-line status. */
+  createJob(files: JobFile[], options: Partial<PrintOptions>, message: string, compact = false): PrintJob {
+    const job: PrintJob = {
+      id: randomUUID(),
+      files,
+      printerName: this.settings.get().printerName,
+      options: { ...DEFAULT_PRINT_OPTIONS, ...options },
+      status: 'draft',
+      compact
+    }
+    this.chat.add('host', message, job)
+    return job
+  }
+
+  /** Files dropped on the window become a job card (Office and unknown files get a friendly note). */
+  async filesDropped(paths: string[]): Promise<void> {
+    const office = paths.filter((p) => kindOf(p) === 'office').map((p) => basename(p))
+    const unknown = paths.filter((p) => kindOf(p) === 'unsupported').map((p) => basename(p))
+    const printable = paths.filter((p) => kindOf(p) === 'pdf' || kindOf(p) === 'image')
+
+    this.chat.setHostState('thinking')
+    const files = await this.prepareFiles(printable.map((path) => ({ path })))
     if (office.length) this.chat.add('host', host.officeLater(office))
     if (unknown.length) this.chat.add('host', host.unsupported(unknown))
     if (files.length) {
-      const job: PrintJob = {
-        id: randomUUID(),
-        files,
-        printerName: this.settings.get().printerName,
-        options: { ...DEFAULT_PRINT_OPTIONS },
-        status: 'draft'
-      }
-      this.chat.add('host', host.jobReady(files.length, jobPageTotal(job)), job)
+      const draft = { files, options: { ...DEFAULT_PRINT_OPTIONS } } as PrintJob
+      this.createJob(files, {}, host.jobReady(files.length, jobPageTotal(draft)))
     }
     this.chat.setHostState('idle')
   }
 
-  /** Changes from the job card: order, ticks, printer, settings. */
-  update(id: string, patch: JobPatch): void {
+  /** Changes from the job card or pop-up: order, ticks, swaps, additions, printer, settings. */
+  async update(id: string, patch: JobPatch): Promise<void> {
+    const current = this.chat.job(id)
+    if (!current || current.status === 'printing') return
+    // Files being swapped in or added need their page counts first.
+    const swapIn = patch.replace?.path ? (await this.prepareFiles([{ path: patch.replace.path, folder: this.folderOf?.(patch.replace.path) }]))[0] : null
+    const added = Array.isArray(patch.add) ? await this.prepareFiles(patch.add.filter((p) => typeof p === 'string').map((path) => ({ path, folder: this.folderOf?.(path) }))) : []
+
     this.chat.updateJob(id, (job) => {
       if (job.status === 'printing') return job
       let files = job.files
+      if (swapIn && patch.replace) files = files.map((f) => (f.id === patch.replace!.fileId ? swapIn : f))
+      if (typeof patch.remove === 'string') files = files.filter((f) => f.id !== patch.remove)
+      if (added.length) files = [...files, ...added]
       if (Array.isArray(patch.order) && patch.order.length === files.length) {
         const byId = new Map(files.map((f) => [f.id, f]))
         const reordered = patch.order.map((fid) => byId.get(fid)).filter((f): f is JobFile => !!f)
@@ -89,6 +120,7 @@ export class PrintDesk {
       if (p.color === 'color' || p.color === 'mono') o.color = p.color
       if (p.duplex === 'off' || p.duplex === 'long' || p.duplex === 'short') o.duplex = p.duplex
       if (typeof p.pages === 'string') o.pages = p.pages.slice(0, 60)
+      if ([1, 2, 4, 6, 9].includes(p.pagesPerSheet as number)) o.pagesPerSheet = p.pagesPerSheet as PrintOptions['pagesPerSheet']
       const printerName = patch.printerName === null || typeof patch.printerName === 'string' ? patch.printerName : job.printerName
       // Editing a finished job turns it back into a draft you can print again.
       return { ...job, files, options: o, printerName, status: 'draft', error: undefined, progress: undefined }

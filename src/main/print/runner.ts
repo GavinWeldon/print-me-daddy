@@ -3,47 +3,38 @@ import { rmSync } from 'fs'
 import { basename } from 'path'
 import { print } from 'pdf-to-printer'
 import type { PrintJob, PrintOptions } from '../../shared/types'
-import { toPrintablePdf } from './documents'
+import { PAGE_RANGES, sidesFor } from '../../shared/pages'
+import { layoutPagesPerSheet, toPrintablePdf } from './documents'
 
 export class CancelledError extends Error {}
 
 const SIDE = { off: 'simplex', long: 'duplexlong', short: 'duplexshort' } as const
 
-/** "1-3, 5" style page ranges. */
-export const PAGE_RANGES = /^\s*\d+\s*(-\s*\d+\s*)?(,\s*\d+\s*(-\s*\d+\s*)?)*$/
+export { PAGE_RANGES }
 
-/** How many pages a range like "1-3,5" picks out of a document with `total` pages. */
-export function pagesInRange(range: string, total: number): number {
-  if (!range.trim()) return total
-  const picked = new Set<number>()
-  for (const part of range.split(',')) {
-    const [a, b] = part.split('-').map((n) => parseInt(n, 10))
-    for (let p = a; p <= (Number.isNaN(b) || b === undefined ? a : b); p++) if (p >= 1 && p <= total) picked.add(p)
-  }
-  return picked.size
-}
-
-/** Total sheets-worth of pages a job will send, including copies. */
+/** Total sides of paper a job will print, including copies and pages per sheet. */
 export function jobPageTotal(job: PrintJob): number {
-  return job.files
-    .filter((f) => f.included && !f.problem)
-    .reduce((sum, f) => sum + pagesInRange(job.options.pages, f.pages ?? 1), 0) * job.options.copies
+  return (
+    job.files
+      .filter((f) => f.included && !f.problem)
+      .reduce((sum, f) => sum + sidesFor(job.options.pages, f.pages ?? 1, job.options.pagesPerSheet), 0) * job.options.copies
+  )
 }
 
-function toPrinterOptions(printer: string, o: PrintOptions) {
+function toPrinterOptions(printer: string, o: PrintOptions, pageRange: boolean) {
   return {
     printer,
     copies: o.copies,
     monochrome: o.color === 'mono',
     side: SIDE[o.duplex],
-    pages: o.pages.trim() ? o.pages.replace(/\s+/g, '') : undefined,
+    pages: pageRange && o.pages.trim() ? o.pages.replace(/s+/g, '') : undefined,
     scale: 'shrink' as const
   }
 }
 
 /**
  * Sends each ticked file to the printer, in order. Calls `onProgress` as it goes and
- * stops between files if `isCancelled()` turns true. Returns the document names sent,
+ * stops between files if `isCancelled()` turns true. Records the document names sent,
  * so a cancel can also pull them back out of the Windows print queue.
  */
 export async function runJob(
@@ -54,15 +45,24 @@ export async function runJob(
   sent: string[]
 ): Promise<void> {
   const files = job.files.filter((f) => f.included && !f.problem)
+  const perSheet = job.options.pagesPerSheet
   for (const [i, file] of files.entries()) {
     if (isCancelled()) throw new CancelledError()
     onProgress(files.length > 1 ? `Sending ${i + 1} of ${files.length}: ${file.name}` : `Sending ${file.name}`)
-    const { pdf, temporary } = await toPrintablePdf(file.path)
-    sent.push(basename(pdf))
+    const temporary: string[] = []
     try {
-      await print(pdf, toPrinterOptions(printer, job.options))
+      const printable = await toPrintablePdf(file.path)
+      if (printable.temporary) temporary.push(printable.pdf)
+      let pdf = printable.pdf
+      // Several pages per sheet: lay them out ourselves (the page range is applied while doing so).
+      if (perSheet > 1) {
+        pdf = await layoutPagesPerSheet(pdf, perSheet, job.options.pages)
+        temporary.push(pdf)
+      }
+      sent.push(basename(pdf))
+      await print(pdf, toPrinterOptions(printer, job.options, perSheet === 1))
     } finally {
-      if (temporary) rmSync(pdf, { force: true })
+      for (const t of temporary) rmSync(t, { force: true })
     }
   }
 }

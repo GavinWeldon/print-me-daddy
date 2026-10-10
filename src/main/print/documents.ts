@@ -4,6 +4,7 @@ import { mkdirSync, readdirSync, rmSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { extname, join } from 'path'
 import { PDFDocument } from 'pdf-lib'
+import { pageNumbers } from '../../shared/pages'
 
 export type FileKind = 'pdf' | 'image' | 'office' | 'unsupported'
 
@@ -76,4 +77,46 @@ export async function toPrintablePdf(path: string): Promise<{ pdf: string; tempo
   const pdf = join(scratchDir, `${randomUUID()}.pdf`)
   await writeFile(pdf, await doc.save())
   return { pdf, temporary: true }
+}
+
+/** Grid for each pages-per-sheet choice: columns × rows, and whether the sheet turns sideways. */
+const LAYOUTS: Record<number, { cols: number; rows: number; landscape: boolean }> = {
+  2: { cols: 2, rows: 1, landscape: true },
+  4: { cols: 2, rows: 2, landscape: false },
+  6: { cols: 3, rows: 2, landscape: true },
+  9: { cols: 3, rows: 3, landscape: false }
+}
+
+/** Makes a temporary PDF with several pages shrunk onto each A4 sheet, in reading order. */
+export async function layoutPagesPerSheet(pdf: string, perSheet: number, range: string): Promise<string> {
+  const layout = LAYOUTS[perSheet]
+  if (!layout) return pdf
+  const source = await PDFDocument.load(await readFile(pdf), { ignoreEncryption: true })
+  const wanted = pageNumbers(range, source.getPageCount()).map((n) => n - 1)
+  const out = await PDFDocument.create()
+  const embedded = await out.embedPdf(source, wanted)
+  const sheetW = layout.landscape ? A4.h : A4.w
+  const sheetH = layout.landscape ? A4.w : A4.h
+  const gap = 10
+  const cellW = (sheetW - MARGIN * 2 - gap * (layout.cols - 1)) / layout.cols
+  const cellH = (sheetH - MARGIN * 2 - gap * (layout.rows - 1)) / layout.rows
+
+  for (let i = 0; i < embedded.length; i += perSheet) {
+    const sheet = out.addPage([sheetW, sheetH])
+    embedded.slice(i, i + perSheet).forEach((page, k) => {
+      const col = k % layout.cols
+      const row = Math.floor(k / layout.cols)
+      const scale = Math.min(cellW / page.width, cellH / page.height)
+      const w = page.width * scale
+      const h = page.height * scale
+      const x = MARGIN + col * (cellW + gap) + (cellW - w) / 2
+      const y = sheetH - MARGIN - (row + 1) * cellH - row * gap + (cellH - h) / 2
+      sheet.drawPage(page, { x, y, width: w, height: h })
+    })
+  }
+
+  mkdirSync(scratchDir, { recursive: true })
+  const file = join(scratchDir, `${randomUUID()}-${perSheet}up.pdf`)
+  await writeFile(file, await out.save())
+  return file
 }

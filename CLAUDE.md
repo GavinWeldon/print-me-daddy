@@ -5,6 +5,8 @@ Electron + React + TypeScript + Vite (electron-vite) Windows app. Owner is a beg
 ## Layout
 - `src/main/`: main process (windows, tray, global hotkey, settings JSON in userData, chat state, host personality lines).
 - `src/main/print/`: printing. `printers.ts` (list via PowerShell Win32_Printer), `documents.ts` (file kinds, page counts, images → A4 PDF), `runner.ts` (pdf-to-printer/SumatraPDF, page ranges, cancel via Remove-PrintJob), `desk.ts` (job cards: drop → job, update, print, cancel, test page), `testPage.ts`.
+- `src/main/library/library.ts`: folder index (walks sourceFolders, fs.watch recursive, first-page PDF text via pdfjs-dist legacy build, cached in userData/library.json).
+- `src/main/brain/`: `fastPath.ts` (no-AI parsing of settings + ordered file chunks, fuzzy matching, versions pick the highest number), `assistant.ts` (typed request → job + confirmation pop-up; Phase 4 smart path plugs in here).
 - `src/preload/`: the only bridge; exposes `window.pmd` (typed by `PmdApi` in `src/shared/types.ts`).
 - `src/renderer/`: React UI. `#quick` hash renders the pop-up quick bar instead of the full window.
 - `assets/host/`: swappable host artwork (`idle|thinking|printing|error` + any image extension; missing moods fall back to idle). `assets/brand/logo.webp` is the logo. `assets/icon/` is resized from `art/source/app-icon.webp` by `npm run icons`.
@@ -14,6 +16,10 @@ Electron + React + TypeScript + Vite (electron-vite) Windows app. Owner is a beg
 - Layout: Paige full-body standing large on the left (bleeds off the bottom), logo top-right, chat dialog below it.
 - **Use the owner's images exactly as they are.** Don't redraw, recreate or "fix" artwork in code; only resize/convert formats where needed (e.g. icons). Ask the owner for new art instead.
 - Known issue in the owner's art: the logo reads "DADDDY" (extra D). Owner decides whether to regenerate it.
+
+## Agreed behaviour
+- Typed requests always open a confirmation pop-up (order, page counts, select/deselect, swap, search to add) before printing. Quick mode (print instantly) exists but is off by default.
+- Dropped files show a job card in the chat.
 
 ## Hard rules
 - **No API keys, tokens or credentials anywhere** in code, config, CI or the installer.

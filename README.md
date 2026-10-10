@@ -51,7 +51,7 @@ npm run pack      # build a standalone copy in release/win-unpacked (quit the ap
 - [x] 0. Setup check
 - [x] 1. Skeleton: chat UI with Paige, tray icon, hotkey, settings
 - [x] 2. Printer selection, drag and drop printing, job cards, test page
-- [ ] 3. Folder indexing and the fast path
+- [x] 3. Folder indexing and the fast path
 - [ ] 4. Smart path through Claude Code
 - [ ] 5. Merging, ordering, Office files
 - [ ] 6. First-run wizard and polish

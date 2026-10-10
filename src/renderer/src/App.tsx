@@ -5,6 +5,7 @@ import { MessageList } from './components/MessageList'
 import { Composer } from './components/Composer'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Splash } from './components/Splash'
+import { ConfirmModal } from './components/ConfirmModal'
 import logoUrl from '../../../assets/brand/logo.webp'
 import printerUrl from '../../../assets/brand/printer.webp'
 
@@ -16,6 +17,8 @@ export default function App() {
   const { printers, refresh: refreshPrinters, reload: reloadPrinters } = usePrinters()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [confirmJobId, setConfirmJobId] = useState<string | null>(null)
+  const closeConfirm = useCallback(() => setConfirmJobId(null), [])
   // The loading screen shows when the app starts and every time the window is reopened.
   const [loading, setLoading] = useState(true)
   const [loadingRun, setLoadingRun] = useState(0)
@@ -27,6 +30,7 @@ export default function App() {
   const dragDepth = useRef(0)
 
   useEffect(() => window.pmd.onOpenSettings(() => setSettingsOpen(true)), [])
+  useEffect(() => window.pmd.onConfirmJob((id) => setConfirmJobId(id)), [])
   useEffect(
     () =>
       window.pmd.onWindowClosed(() => {
@@ -111,6 +115,10 @@ export default function App() {
           <small>Let go to send these files to {hostName}</small>
         </div>
       </div>
+
+      {confirmJobId && chat.jobs[confirmJobId] && (
+        <ConfirmModal job={chat.jobs[confirmJobId]} printers={printers} hostName={hostName} onClose={closeConfirm} />
+      )}
 
       {loading && <Splash key={loadingRun} onDone={finishLoading} />}
 

@@ -9,9 +9,10 @@ export const DEFAULT_SETTINGS: Settings = {
   startWithWindows: false,
   sourceFolders: [],
   printerName: null,
-  quickMode: true,
+  quickMode: false,
   quickModePageLimit: 20,
-  firstRunComplete: false
+  firstRunComplete: false,
+  settingsVersion: 2
 }
 
 /**
@@ -40,6 +41,11 @@ export class SettingsStore {
     if (!existsSync(this.file)) return { ...DEFAULT_SETTINGS }
     try {
       const saved = JSON.parse(readFileSync(this.file, 'utf8'))
+      // v2: typed requests always get a confirmation pop-up unless quick mode is switched on deliberately.
+      if (saved.settingsVersion !== 2) {
+        saved.quickMode = false
+        saved.settingsVersion = 2
+      }
       return { ...DEFAULT_SETTINGS, ...saved }
     } catch {
       // A broken file shouldn't stop the app opening: keep a copy and start fresh.

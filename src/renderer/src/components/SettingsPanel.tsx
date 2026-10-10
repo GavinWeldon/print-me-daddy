@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AppInfo, PrinterInfo, Settings } from '../../../shared/types'
 import { HotkeyInput } from './HotkeyInput'
 import { PrinterSelect } from './PrinterSelect'
+import { useIndexStatus } from '../hooks'
 
 interface Props {
   settings: Settings
@@ -15,6 +16,11 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const index = useIndexStatus()
+  const addFolders = async () => {
+    const picked = await window.pmd.pickFolders()
+    if (picked.length) update({ sourceFolders: [...settings.sourceFolders, ...picked] })
+  }
   const [testState, setTestState] = useState<{ busy: boolean; message?: string; ok?: boolean }>({ busy: false })
 
   const printTest = async () => {
@@ -70,6 +76,61 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
             </button>
           </div>
           {testState.message && <small className={testState.ok === false ? 'warn' : testState.ok ? 'ok' : ''}>{testState.message}</small>}
+        </div>
+
+        <div className="field">
+          <span>Your document folders</span>
+          {settings.sourceFolders.length === 0 && <small>None yet. Add the folders you keep documents in and I'll find files by name.</small>}
+          <ul className="folder-list">
+            {settings.sourceFolders.map((folder) => (
+              <li key={folder} title={folder}>
+                <span>📁 {folder}</span>
+                <button
+                  className="icon-btn"
+                  title="Stop using this folder"
+                  onClick={() => update({ sourceFolders: settings.sourceFolders.filter((f) => f !== folder) })}
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="row">
+            <button className="pill-btn small" onClick={addFolders}>
+              <span className="crown">♛</span> Add folder
+            </button>
+          </div>
+          {index && settings.sourceFolders.length > 0 && (
+            <small>
+              {index.files.toLocaleString()} file{index.files === 1 ? '' : 's'} indexed
+              {index.busy ? (index.pendingText > 0 ? ` · reading PDFs (${index.pendingText} to go)…` : ' · looking through folders…') : ' · up to date ✓'}
+            </small>
+          )}
+        </div>
+
+        <div className="field">
+          <span>Quick mode</span>
+          <label className="field--row">
+            <input type="checkbox" checked={settings.quickMode} onChange={(e) => update({ quickMode: e.target.checked })} />
+            <span>Skip the check for small, obvious requests</span>
+          </label>
+          <small>
+            Off: every typed request shows what I found before printing. On: if I'm sure of every file and it's under
+            the page limit, I print straight away (you can still cancel).
+          </small>
+          {settings.quickMode && (
+            <label className="row">
+              <small>Page limit</small>
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={settings.quickModePageLimit}
+                onChange={(e) => update({ quickModePageLimit: Number(e.target.value) || 20 })}
+                style={{ width: 90 }}
+              />
+            </label>
+          )}
         </div>
 
         <label className="field">

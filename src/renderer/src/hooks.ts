@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Avatars, ChatState, PrinterInfo, Settings } from '../../shared/types'
+import type { Avatars, ChatState, IndexStatus, PrinterInfo, Settings } from '../../shared/types'
 
 /** Live copy of the conversation, kept in sync with the main process. */
 export function useChat(): ChatState {
@@ -51,4 +51,14 @@ export function usePrinters(): { printers: PrinterInfo[]; loading: boolean; refr
   const refresh = useCallback(() => load(true), [load])
   const reload = useCallback(() => load(false), [load])
   return { printers, loading, refresh, reload }
+}
+
+/** How the folder index is getting on. */
+export function useIndexStatus(): IndexStatus | null {
+  const [status, setStatus] = useState<IndexStatus | null>(null)
+  useEffect(() => {
+    window.pmd.getIndexStatus().then(setStatus)
+    return window.pmd.onIndexStatus(setStatus)
+  }, [])
+  return status
 }

@@ -12,10 +12,14 @@ export interface Settings {
   startWithWindows: boolean
   /** Chosen printer, or null to use the Windows default printer. */
   printerName: string | null
-  // Used in later phases, stored now so the settings file shape is stable.
+  /** Folders whose files Paige can find by name. */
   sourceFolders: string[]
+  /** Small, confident typed requests print straight away without a job card. */
   quickMode: boolean
   quickModePageLimit: number
+  /** Bumped when a default changes in a way old settings files need adjusting for. */
+  settingsVersion?: number
+  // Used in later phases, stored now so the settings file shape is stable.
   firstRunComplete: boolean
 }
 
@@ -47,9 +51,13 @@ export interface PrintOptions {
   duplex: 'off' | 'long' | 'short'
   /** Page ranges like "1-3,5". Empty means all pages. */
   pages: string
+  /** Pages shrunk onto each side of paper. */
+  pagesPerSheet: 1 | 2 | 4 | 6 | 9
 }
 
-export const DEFAULT_PRINT_OPTIONS: PrintOptions = { copies: 1, color: 'color', duplex: 'off', pages: '' }
+export const PAGES_PER_SHEET = [1, 2, 4, 6, 9] as const
+
+export const DEFAULT_PRINT_OPTIONS: PrintOptions = { copies: 1, color: 'color', duplex: 'off', pages: '', pagesPerSheet: 1 }
 
 export interface JobFile {
   id: string
@@ -60,6 +68,19 @@ export interface JobFile {
   included: boolean
   /** Why this file can't be printed, if it can't. */
   problem?: string
+  /** A note from Paige, e.g. that this was her best guess for something you typed. */
+  note?: string
+  /** Where it lives, e.g. "Uni/Mechanics/Tutorials". */
+  folder?: string
+  /** Other files that could be what you meant (offered as "Swap for…"). */
+  alternatives?: FileHit[]
+}
+
+/** A file from the user's folders, as shown in search results. */
+export interface FileHit {
+  path: string
+  name: string
+  folder: string
 }
 
 export type JobStatus = 'draft' | 'printing' | 'done' | 'failed' | 'cancelled'
@@ -74,6 +95,19 @@ export interface PrintJob {
   /** e.g. "Sending 2 of 3…" while printing. */
   progress?: string
   error?: string
+  /** Quick-mode jobs show as a small status line instead of a full card. */
+  compact?: boolean
+}
+
+// ---------- Folder index ----------
+
+export interface IndexStatus {
+  folders: number
+  files: number
+  /** Still walking folders or reading PDF text. */
+  busy: boolean
+  /** PDFs whose first page still needs reading. */
+  pendingText: number
 }
 
 export interface JobPatch {
@@ -83,6 +117,12 @@ export interface JobPatch {
   included?: Record<string, boolean>
   printerName?: string | null
   options?: Partial<PrintOptions>
+  /** Add files (by path) to the end of the list. */
+  add?: string[]
+  /** Swap one file for another. */
+  replace?: { fileId: string; path: string }
+  /** Take a file off the list. */
+  remove?: string
 }
 
 export interface PrintResult {
@@ -124,9 +164,17 @@ export interface PmdApi {
 
   listPrinters(refresh?: boolean): Promise<PrinterInfo[]>
   updateJob(jobId: string, patch: JobPatch): Promise<void>
+  /** Paige found files for a typed request: show the confirmation pop-up for this job. */
+  onConfirmJob(cb: (jobId: string) => void): () => void
+  searchFiles(query: string): Promise<FileHit[]>
   printJob(jobId: string, confirmed?: boolean): Promise<PrintResult>
   cancelJob(jobId: string): Promise<void>
   printTestPage(printerName: string | null): Promise<PrintResult>
+
+  /** Opens a folder picker; returns the chosen folders (empty if cancelled). */
+  pickFolders(): Promise<string[]>
+  getIndexStatus(): Promise<IndexStatus>
+  onIndexStatus(cb: (s: IndexStatus) => void): () => void
 
   openMain(opts?: { settings?: boolean }): void
   onOpenSettings(cb: () => void): () => void
