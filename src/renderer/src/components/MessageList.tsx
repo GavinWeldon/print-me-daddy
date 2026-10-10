@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react'
-import type { ChatMessage } from '../../../shared/types'
+import type { ChatMessage, PrinterInfo, PrintJob } from '../../../shared/types'
+import { JobCard } from './JobCard'
 
 interface Props {
   messages: ChatMessage[]
+  jobs: Record<string, PrintJob>
+  printers: PrinterInfo[]
   hostName: string
   typing: boolean
 }
 
-export function MessageList({ messages, hostName, typing }: Props) {
+export function MessageList({ messages, jobs, printers, hostName, typing }: Props) {
   const endRef = useRef<HTMLDivElement>(null)
 
   // Keep the newest message in view.
@@ -21,6 +24,7 @@ export function MessageList({ messages, hostName, typing }: Props) {
         <div key={m.id} className={`msg msg--${m.from}`}>
           {m.from === 'host' && <div className="msg-name">{hostName}</div>}
           <div className="msg-bubble">{m.text}</div>
+          {m.jobId && jobs[m.jobId] && <JobCard job={jobs[m.jobId]} printers={printers} />}
         </div>
       ))}
       {typing && (

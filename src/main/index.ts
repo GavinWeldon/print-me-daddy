@@ -1,11 +1,14 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from 'electron'
-import { basename, join } from 'path'
+import { join } from 'path'
 import { SettingsStore } from './settings'
 import { Chat } from './chat'
 import { loadAvatars } from './avatars'
 import * as host from './host/personality'
 import { prettyHotkey } from '../shared/hotkey'
-import { HOST_STATES, type HostState, type Settings, type SettingsUpdateResult } from '../shared/types'
+import { PrintDesk } from './print/desk'
+import { listPrinters } from './print/printers'
+import { cleanScratch } from './print/documents'
+import { HOST_STATES, type HostState, type JobPatch, type Settings, type SettingsUpdateResult } from '../shared/types'
 
 // Where artwork lives: the project's assets folder while developing,
 // or the installed app's resources folder once packaged.
@@ -18,6 +21,7 @@ const startHidden = process.argv.includes('--hidden')
 
 let settings: SettingsStore
 let chat: Chat
+let desk: PrintDesk
 let mainWindow: BrowserWindow | null = null
 let quickWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -37,6 +41,9 @@ function start(): void {
   app.setAppUserModelId('com.gavweldon.printmedaddy')
   settings = new SettingsStore()
   chat = new Chat((state) => broadcast('chat:changed', state))
+  desk = new PrintDesk(chat, settings)
+  cleanScratch()
+  listPrinters().catch(() => {}) // warm up the printer list in the background
 
   registerIpc()
   createMainWindow()
@@ -205,6 +212,7 @@ function updateSettings(patch: Partial<Settings>): SettingsUpdateResult {
     next.hostName = name
   }
   if (typeof patch.startWithWindows === 'boolean') next.startWithWindows = patch.startWithWindows
+  if (patch.printerName === null || typeof patch.printerName === 'string') next.printerName = patch.printerName
 
   if (typeof patch.hotkey === 'string' && patch.hotkey !== prev.hotkey) {
     if (hotkeyActive) globalShortcut.unregister(prev.hotkey)
@@ -261,9 +269,15 @@ function registerIpc(): void {
   ipcMain.handle('chat:get', () => chat.get())
   ipcMain.handle('chat:send', (_e, text: unknown) => handleUserMessage(text))
   ipcMain.handle('chat:files-dropped', (_e, paths: unknown) => {
-    const names = (Array.isArray(paths) ? paths : []).filter((p) => typeof p === 'string' && p).map((p) => basename(p))
-    if (names.length) chat.add('host', host.filesDropped(names))
+    const files = (Array.isArray(paths) ? paths : []).filter((p): p is string => typeof p === 'string' && !!p)
+    if (files.length) return desk.filesDropped(files)
   })
+
+  ipcMain.handle('printers:list', (_e, refresh: unknown) => listPrinters(refresh === true))
+  ipcMain.handle('job:update', (_e, id: unknown, patch: unknown) => desk.update(String(id), (patch ?? {}) as JobPatch))
+  ipcMain.handle('job:print', (_e, id: unknown, confirmed: unknown) => desk.print(String(id), confirmed === true))
+  ipcMain.handle('job:cancel', (_e, id: unknown) => desk.cancel(String(id)))
+  ipcMain.handle('print:test-page', (_e, printer: unknown) => desk.testPage(typeof printer === 'string' ? printer : null))
 
   ipcMain.on('window:open-main', (_e, opts?: { settings?: boolean }) => showMain(opts))
   ipcMain.on('quick:hide', () => quickWindow?.hide())

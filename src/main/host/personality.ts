@@ -16,16 +16,53 @@ export function greeting(name: string): string {
 export function placeholderReply(text: string): string {
   const short = text.length > 60 ? text.slice(0, 57) + '...' : text
   return pick([
-    `"${short}"? Love the ambition. My printer hands arrive in the next update, so for now I'm just here looking pretty. 😉`,
-    `I'd print that in a heartbeat, darling, but nobody's plugged me into a printer yet. Next phase, I promise. 💅`,
-    `Noted, gorgeous. Once they connect me to a printer, you won't be able to stop me.`,
-    `Ooh, demanding. I like it. Give me one more update and I'll make it happen.`
+    `"${short}"? Love the ambition. I can't find files by name just yet, so drag them onto me and I'll print them right now. 😉`,
+    `I'm still learning to read your mind, darling. For now, drop the files on me and I'll handle the rest. 💅`,
+    `Typing requests is coming in my next update. Drag and drop me something in the meantime?`
   ])
 }
 
-export function filesDropped(names: string[]): string {
-  const list = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ')
-  return `Ooh, ${names.length === 1 ? 'a file' : `${names.length} files`} for me? (${list}) Drag-and-drop printing lands in the next update. I'll remember how good that felt.`
+const list = (names: string[]) => (names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', '))
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+export function jobReady(files: number, pages: number): string {
+  return pick([
+    `Ooh, ${plural(files, 'file')}, ${plural(pages, 'page')}. Check the details and hit Print when you're ready. 💋`,
+    `Got them. ${plural(pages, 'page')} lined up and waiting for your say-so.`,
+    `Mmm, fresh documents. Have a look, tweak anything you like, then Print.`
+  ])
+}
+
+export function officeLater(names: string[]): string {
+  return `I can't do Word, PowerPoint or Excel files just yet (${list(names)}). That's coming in a later update, promise. Save them as PDF and I'm all yours.`
+}
+
+export function unsupported(names: string[]): string {
+  return `I don't know how to print ${list(names)}, darling. PDFs and pictures are my thing.`
+}
+
+export function printing(printer: string): string {
+  return pick([`Sending it to ${printer}. Warm up the paper tray. 🔥`, `Off to ${printer} it goes.`, `On it. ${printer}, do your thing.`])
+}
+
+export function printed(pages: number, printer: string): string {
+  return pick([
+    `Done! ${plural(pages, 'page')} sent to ${printer}. Hot off the press. 💋`,
+    `All sent to ${printer}. ${plural(pages, 'page')} of pure perfection.`,
+    `That's ${plural(pages, 'page')} on their way. Go grab them, gorgeous.`
+  ])
+}
+
+export function printFailed(reason: string): string {
+  return `Ugh, that didn't work: ${reason} Check the printer's on and has paper, then try again?`
+}
+
+export function cancelled(): string {
+  return pick([`Cancelled. Consider it forgotten.`, `Stopped. Changed your mind? I'll allow it.`])
+}
+
+export function testPageSent(printer: string): string {
+  return `Test page sent to ${printer}. If the colours look gorgeous and the border's all there, we're in business. 💋`
 }
 
 export function moodReply(state: string): string {

@@ -1,17 +1,27 @@
 import { useEffect, useState } from 'react'
-import type { AppInfo, Settings } from '../../../shared/types'
+import type { AppInfo, PrinterInfo, Settings } from '../../../shared/types'
 import { HotkeyInput } from './HotkeyInput'
+import { PrinterSelect } from './PrinterSelect'
 
 interface Props {
   settings: Settings
+  printers: PrinterInfo[]
+  onRefreshPrinters: () => void
   onClose: () => void
 }
 
-export function SettingsPanel({ settings, onClose }: Props) {
+export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }: Props) {
   const [name, setName] = useState(settings.hostName)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const [testState, setTestState] = useState<{ busy: boolean; message?: string; ok?: boolean }>({ busy: false })
+
+  const printTest = async () => {
+    setTestState({ busy: true, message: 'Sending a test page…' })
+    const result = await window.pmd.printTestPage(settings.printerName)
+    setTestState({ busy: false, ok: result.ok, message: result.ok ? 'Test page sent. Go have a look 💋' : result.error })
+  }
 
   useEffect(() => {
     window.pmd.getAppInfo().then(setInfo)
@@ -40,6 +50,27 @@ export function SettingsPanel({ settings, onClose }: Props) {
             ✕
           </button>
         </header>
+
+        <div className="field">
+          <span>Printer</span>
+          <div className="row">
+            <PrinterSelect printers={printers} value={settings.printerName} onChange={(printerName) => update({ printerName })} />
+            <button className="icon-btn" title="Look for printers again" onClick={onRefreshPrinters}>
+              ↻
+            </button>
+          </div>
+          <small>
+            {printers.length === 0
+              ? 'No printers found yet. Add one in Windows Settings › Bluetooth & devices › Printers & scanners, then press ↻.'
+              : `${printers.length} printer${printers.length === 1 ? '' : 's'} installed. Each print job can still use a different one.`}
+          </small>
+          <div className="row">
+            <button className="pill-btn small" disabled={testState.busy || printers.length === 0} onClick={printTest}>
+              <span className="crown">♛</span> Print a test page
+            </button>
+          </div>
+          {testState.message && <small className={testState.ok === false ? 'warn' : testState.ok ? 'ok' : ''}>{testState.message}</small>}
+        </div>
 
         <label className="field">
           <span>Host name</span>

@@ -4,6 +4,7 @@ Electron + React + TypeScript + Vite (electron-vite) Windows app. Owner is a beg
 
 ## Layout
 - `src/main/`: main process (windows, tray, global hotkey, settings JSON in userData, chat state, host personality lines).
+- `src/main/print/`: printing. `printers.ts` (list via PowerShell Win32_Printer), `documents.ts` (file kinds, page counts, images → A4 PDF), `runner.ts` (pdf-to-printer/SumatraPDF, page ranges, cancel via Remove-PrintJob), `desk.ts` (job cards: drop → job, update, print, cancel, test page), `testPage.ts`.
 - `src/preload/`: the only bridge; exposes `window.pmd` (typed by `PmdApi` in `src/shared/types.ts`).
 - `src/renderer/`: React UI. `#quick` hash renders the pop-up quick bar instead of the full window.
 - `assets/host/`: swappable host artwork (`idle|thinking|printing|error` + any image extension; missing moods fall back to idle). `assets/brand/logo.webp` is the logo. `assets/icon/` is resized from `art/source/app-icon.webp` by `npm run icons`.
@@ -21,6 +22,9 @@ Electron + React + TypeScript + Vite (electron-vite) Windows app. Owner is a beg
 - Nothing tied to one printer brand.
 
 ## Gotchas
+- Don't use pdf-to-printer's `getPrinters()`/`getDefaultPrinter()`: they crash on some virtual printers (OneNote). Use `src/main/print/printers.ts`.
+- SumatraPDF must stay unpacked from the asar (`build.asarUnpack` in package.json).
+- Printing logic can be tested without paper by bundling a harness with esbuild (`--external:electron`) and running it with `npx electron`.
 - The owner's Desktop and Start menu shortcuts point at `release/win-unpacked/Print Me Daddy.exe` (made with `npm run pack`). After a phase, quit the app from the tray and re-run `npm run pack` so the shortcuts open the latest version. The real installer comes in Phase 7.
 - Electron 44 doesn't download its binary on install by itself; the root `postinstall` runs `install-electron`.
 - electron-vite 5 supports Vite up to 7, so don't bump Vite to 8 until electron-vite supports it.

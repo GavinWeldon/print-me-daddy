@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { useAvatars, useChat, useSettings } from './hooks'
+import { useAvatars, useChat, usePrinters, useSettings } from './hooks'
 import { Host, HOST_STATUS } from './components/Host'
 import { MessageList } from './components/MessageList'
 import { Composer } from './components/Composer'
@@ -11,6 +11,7 @@ export default function App() {
   const chat = useChat()
   const settings = useSettings()
   const avatars = useAvatars()
+  const { printers, refresh: refreshPrinters } = usePrinters()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
   // Drag events fire for every child element, so count enters/leaves to know when it really left.
@@ -71,7 +72,13 @@ export default function App() {
             </button>
           </header>
           <div className="chat-frame">
-            <MessageList messages={chat.messages} hostName={hostName} typing={chat.hostState === 'thinking'} />
+            <MessageList
+              messages={chat.messages}
+              jobs={chat.jobs}
+              printers={printers}
+              hostName={hostName}
+              typing={chat.hostState === 'thinking'}
+            />
             <Composer hostName={hostName} onSend={(t) => window.pmd.sendMessage(t)} />
           </div>
         </section>
@@ -84,7 +91,9 @@ export default function App() {
         </div>
       </div>
 
-      {settingsOpen && settings && <SettingsPanel settings={settings} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && settings && (
+        <SettingsPanel settings={settings} printers={printers} onRefreshPrinters={refreshPrinters} onClose={() => setSettingsOpen(false)} />
+      )}
     </div>
   )
 }

@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
-import type { Avatars, ChatState, Settings } from '../../shared/types'
+import { useCallback, useEffect, useState } from 'react'
+import type { Avatars, ChatState, PrinterInfo, Settings } from '../../shared/types'
 
 /** Live copy of the conversation, kept in sync with the main process. */
 export function useChat(): ChatState {
-  const [state, setState] = useState<ChatState>({ messages: [], hostState: 'idle' })
+  const [state, setState] = useState<ChatState>({ messages: [], hostState: 'idle', jobs: {} })
   useEffect(() => {
     window.pmd.getChat().then(setState)
     return window.pmd.onChatChanged(setState)
@@ -31,4 +31,20 @@ export function useAvatars(): Avatars {
     return () => window.removeEventListener('focus', load)
   }, [])
   return avatars
+}
+
+/** Printers installed in Windows (default first), plus a way to look again. */
+export function usePrinters(): { printers: PrinterInfo[]; loading: boolean; refresh: () => void } {
+  const [printers, setPrinters] = useState<PrinterInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const load = useCallback((refresh: boolean) => {
+    setLoading(true)
+    window.pmd
+      .listPrinters(refresh)
+      .then(setPrinters)
+      .catch(() => setPrinters([]))
+      .finally(() => setLoading(false))
+  }, [])
+  useEffect(() => load(false), [load])
+  return { printers, loading, refresh: () => load(true) }
 }

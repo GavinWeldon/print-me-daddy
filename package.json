@@ -60,11 +60,18 @@
       "target": [
         "nsis"
       ]
-    }
+    },
+    "asarUnpack": [
+      "node_modules/pdf-to-printer/dist/*.exe"
+    ]
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
     "electron-winstaller": false
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1",
+    "pdf-to-printer": "5.8.1"
   }
 }

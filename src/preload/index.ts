@@ -25,6 +25,12 @@ const api: PmdApi = {
 
   getPathForFile: (file) => webUtils.getPathForFile(file),
 
+  listPrinters: (refresh) => ipcRenderer.invoke('printers:list', refresh),
+  updateJob: (jobId, patch) => ipcRenderer.invoke('job:update', jobId, patch),
+  printJob: (jobId, confirmed) => ipcRenderer.invoke('job:print', jobId, confirmed),
+  cancelJob: (jobId) => ipcRenderer.invoke('job:cancel', jobId),
+  printTestPage: (printerName) => ipcRenderer.invoke('print:test-page', printerName),
+
   openMain: (opts) => ipcRenderer.send('window:open-main', opts),
   onOpenSettings: (cb) => listen('ui:open-settings', cb),
   quickHide: () => ipcRenderer.send('quick:hide'),
