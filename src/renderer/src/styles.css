@@ -80,7 +80,7 @@ code {
   height: 100%;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(280px, 40%) 1fr;
+  grid-template-columns: minmax(280px, 40%) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   padding: 14px 18px 18px 0;
   /* The owner's room picture, unchanged, with soft shading on top:
@@ -104,9 +104,9 @@ code {
 }
 .host-stage img {
   position: absolute;
-  top: 1%;
-  left: 52%;
-  height: 132%;
+  top: 2%;
+  left: 50%;
+  height: 104%;
   transform: translateX(-50%);
   filter: drop-shadow(0 0 22px var(--pink-glow));
   user-select: none;
@@ -144,14 +144,40 @@ code {
   min-height: 0;
 }
 
-.logo {
+/* Top row: logo, with the printer beside it (the printer glows while printing). */
+.topline {
   flex: none;
-  align-self: center;
-  height: clamp(90px, 24vh, 200px);
-  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  height: clamp(110px, 27vh, 250px);
+}
+.logo {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 0 16px rgba(255, 47, 163, 0.45));
   user-select: none;
+}
+.printer {
+  flex: none;
+  height: 100%;
+  aspect-ratio: 398 / 290;
+  object-fit: contain;
+  /* Fade the picture's edges so it melts into the room behind it. */
+  -webkit-mask-image: radial-gradient(ellipse 72% 72% at 50% 52%, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse 72% 72% at 50% 52%, #000 62%, transparent 100%);
+  user-select: none;
+}
+.topline.host--printing .printer {
+  animation: printer-glow 0.8s ease-in-out infinite;
+}
+@media (max-width: 900px) {
+  .printer {
+    display: none;
+  }
 }
 
 /* ---------- Chat panel ---------- */
@@ -604,6 +630,11 @@ small,
   }
   75% {
     transform: translateX(calc(-50% + 8px));
+  }
+}
+@keyframes printer-glow {
+  50% {
+    filter: brightness(1.25) drop-shadow(0 0 18px rgba(255, 47, 163, 0.9));
   }
 }
 @keyframes blink {

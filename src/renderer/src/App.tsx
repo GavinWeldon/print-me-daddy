@@ -5,6 +5,7 @@ import { MessageList } from './components/MessageList'
 import { Composer } from './components/Composer'
 import { SettingsPanel } from './components/SettingsPanel'
 import logoUrl from '../../../assets/brand/logo.webp'
+import printerUrl from '../../../assets/brand/printer.webp'
 
 /** The full window: the host standing on the left, logo and chat on the right. */
 export default function App() {
@@ -55,7 +56,10 @@ export default function App() {
       </aside>
 
       <main className="main">
-        <img className="logo" src={logoUrl} alt="Print Me Daddy" draggable={false} />
+        <div className={`topline host--${chat.hostState}`}>
+          <img className="logo" src={logoUrl} alt="Print Me Daddy" draggable={false} />
+          <img className="printer" src={printerUrl} alt="" draggable={false} />
+        </div>
 
         <section className={`chat host--${chat.hostState}`}>
           <header className="chat-head">
