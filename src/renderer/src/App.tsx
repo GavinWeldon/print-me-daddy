@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { useAvatars, useChat, useSettings } from './hooks'
-import { Host } from './components/Host'
+import { Host, HOST_STATUS } from './components/Host'
 import { MessageList } from './components/MessageList'
 import { Composer } from './components/Composer'
 import { SettingsPanel } from './components/SettingsPanel'
-import logoUrl from '../../../assets/brand/logo.svg'
+import logoUrl from '../../../assets/brand/logo.webp'
 
-/** The full window: a poster column (host + logo) on the left, chat on the right. */
+/** The full window: the host standing on the left, logo and chat on the right. */
 export default function App() {
   const chat = useChat()
   const settings = useSettings()
@@ -49,27 +49,37 @@ export default function App() {
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <aside className="poster">
+      <aside className="stage">
         <Host name={hostName} state={chat.hostState} avatars={avatars} />
-        <img className="logo" src={logoUrl} alt="Print Me Daddy" draggable={false} />
       </aside>
 
-      <section className="chat">
-        <header className="chat-head">
-          <h1>
-            Chat with <span>{hostName}</span>
-          </h1>
-          <button className="icon-btn" onClick={() => setSettingsOpen(true)} title="Settings">
-            ⚙
-          </button>
-        </header>
-        <MessageList messages={chat.messages} hostName={hostName} typing={chat.hostState === 'thinking'} />
-        <Composer hostName={hostName} onSend={(t) => window.pmd.sendMessage(t)} />
-      </section>
+      <main className="main">
+        <img className="logo" src={logoUrl} alt="Print Me Daddy" draggable={false} />
+
+        <section className={`chat host--${chat.hostState}`}>
+          <header className="chat-head">
+            <span className="name-tag">
+              <i>♥</i>
+              {hostName}
+            </span>
+            <span className="status-pill">
+              <i />
+              {HOST_STATUS[chat.hostState]}
+            </span>
+            <button className="icon-btn" onClick={() => setSettingsOpen(true)} title="Settings">
+              ⚙
+            </button>
+          </header>
+          <div className="chat-frame">
+            <MessageList messages={chat.messages} hostName={hostName} typing={chat.hostState === 'thinking'} />
+            <Composer hostName={hostName} onSend={(t) => window.pmd.sendMessage(t)} />
+          </div>
+        </section>
+      </main>
 
       <div className="drop-overlay" aria-hidden={!dragging}>
         <div className="drop-card">
-          Drop it on me 💋
+          Drop it on me <span>♥</span>
           <small>Let go to send these files to {hostName}</small>
         </div>
       </div>

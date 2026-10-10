@@ -1,6 +1,6 @@
 import type { Avatars, HostState } from '../../../shared/types'
 
-const STATUS: Record<HostState, string> = {
+export const HOST_STATUS: Record<HostState, string> = {
   idle: 'Ready when you are',
   thinking: 'Thinking…',
   printing: 'Printing…',
@@ -11,11 +11,11 @@ interface Props {
   name: string
   state: HostState
   avatars: Avatars
-  size?: 'poster' | 'small'
+  size?: 'stage' | 'small'
 }
 
 /** The host character, showing the picture for her current mood. */
-export function Host({ name, state, avatars, size = 'poster' }: Props) {
+export function Host({ name, state, avatars, size = 'stage' }: Props) {
   const src = avatars[state]
 
   if (size === 'small') {
@@ -33,17 +33,8 @@ export function Host({ name, state, avatars, size = 'poster' }: Props) {
   }
 
   return (
-    <div className={`host-poster host--${state}`}>
-      <div className="host-card">
-        {src ? <img src={src} alt={`${name} (${state})`} draggable={false} /> : <span className="host-fallback">{name[0]}</span>}
-      </div>
-      <div className="host-caption">
-        <strong>{name}</strong>
-        <span className="status-pill">
-          <i />
-          {STATUS[state]}
-        </span>
-      </div>
+    <div className={`host-stage host--${state}`}>
+      {src ? <img src={src} alt={`${name} (${state})`} draggable={false} /> : <span className="host-fallback">{name[0]}</span>}
     </div>
   )
 }

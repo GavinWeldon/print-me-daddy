@@ -15,12 +15,11 @@
     "start": "electron-vite preview",
     "pack": "electron-vite build && electron-builder --dir",
     "typecheck": "tsc --noEmit --composite false -p tsconfig.node.json && tsc --noEmit --composite false -p tsconfig.web.json",
-    "icons": "node scripts/make-icons.mjs",
-    "logo": "node scripts/make-logo.mjs",
-    "paige": "node scripts/make-paige.mjs"
+    "icons": "node scripts/make-icons.mjs"
   },
   "devDependencies": {
     "@fontsource/knewave": "5.3.0",
+    "@fontsource/pacifico": "5.3.0",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -28,9 +27,9 @@
     "electron": "44.7.0",
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
-    "opentype.js": "2.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "sharp": "0.35.5",
     "typescript": "6.0.3",
     "vite": "7.3.7"
   },

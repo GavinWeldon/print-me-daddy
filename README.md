@@ -24,19 +24,15 @@ Print Me Daddy contains **no API keys and no accounts**. For tricky requests it 
 
 ## Swap Paige's artwork
 
-Pictures live in [`assets/host`](assets/host): `idle`, `thinking`, `printing` and `error`, as `.svg`, `.png`, `.gif`, `.webp` or `.jpg` (portrait, 3:4). Replace a file with your own picture (same name), then click back into the app. No code changes needed. Type `/mood thinking` (or `idle`, `printing`, `error`) in the chat to preview each one.
+Paige's picture lives in [`assets/host`](assets/host). Right now there's one, `idle.webp` (a full-body picture on a see-through background), used for every mood. Add `thinking`, `printing` and/or `error` pictures in the same style (`.png`, `.webp`, `.gif` or `.jpg`) and she'll switch between them automatically. No code changes needed. Type `/mood thinking` (or `idle`, `printing`, `error`) in the chat to preview each one.
 
-Want a realistic painted Paige? See [docs/paige-art-prompts.md](docs/paige-art-prompts.md) for ready-made image-generator prompts.
+[docs/paige-art-prompts.md](docs/paige-art-prompts.md) has tips for making matching pictures.
 
-## Artwork scripts
+## Artwork
 
-The placeholder artwork is drawn by code, so it can be tweaked and regenerated:
-
-```bash
-npm run paige    # assets/host/*.svg   (scripts/make-paige.mjs)
-npm run logo     # assets/brand/logo.svg (scripts/make-logo.mjs, uses the free Knewave font)
-npm run icons    # assets/icon/*.png   (scripts/make-icons.mjs)
-```
+- `art/source/`: the original artwork (logo, Paige, scenes, app icon).
+- `assets/brand/logo.webp`: the logo shown in the app.
+- `assets/icon/`: app and tray icons, resized from `art/source/app-icon.webp` with `npm run icons`.
 
 ## Development
 

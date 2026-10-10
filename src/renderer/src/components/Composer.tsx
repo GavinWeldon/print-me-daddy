@@ -49,7 +49,7 @@ export function Composer({ hostName, onSend }: Props) {
         onKeyDown={onKeyDown}
       />
       <button className="send-btn" onClick={send} disabled={!text.trim()} title="Send (Enter)">
-        Send
+        <span className="crown">♛</span> Send <span className="chev">›</span>
       </button>
     </div>
   )
