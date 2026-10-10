@@ -1,7 +1,7 @@
 /* ---------- Theme: black + hot pink neon, crowns and hearts (from the owner's mockups) ---------- */
 :root {
   --bg: #0a0609;
-  --panel: rgba(12, 6, 13, 0.9);
+  --panel: rgba(12, 6, 13, 0.78);
   --surface: #1a0f1b;
   --surface-2: #261626;
   --border: rgba(255, 255, 255, 0.08);
@@ -83,12 +83,13 @@ code {
   grid-template-columns: minmax(280px, 40%) 1fr;
   grid-template-rows: minmax(0, 1fr);
   padding: 14px 18px 18px 0;
+  /* The owner's room picture, unchanged, with soft shading on top:
+     a little behind Paige so she stands out, more on the right so the chat is easy to read. */
   background:
-    radial-gradient(420px 520px at 20% 45%, rgba(255, 47, 163, 0.32), transparent 70%),
-    radial-gradient(500px 360px at 85% 0%, rgba(166, 59, 255, 0.22), transparent 70%),
-    radial-gradient(600px 400px at 100% 100%, rgba(255, 47, 163, 0.14), transparent 70%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 64px),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 64px),
+    radial-gradient(380px 520px at 22% 55%, rgba(255, 47, 163, 0.18), transparent 70%),
+    linear-gradient(90deg, rgba(8, 3, 8, 0.25) 0%, rgba(8, 3, 8, 0.35) 38%, rgba(8, 3, 8, 0.6) 100%),
+    linear-gradient(0deg, rgba(8, 3, 8, 0.55) 0%, transparent 35%),
+    url('../../../assets/brand/background.webp') center / cover no-repeat,
     var(--bg);
 }
 
@@ -230,6 +231,7 @@ code {
 /* The neon dialog box. */
 .chat-frame {
   position: relative;
+  backdrop-filter: blur(8px);
   flex: 1;
   min-height: 0;
   display: flex;
