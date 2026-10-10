@@ -34,7 +34,7 @@ export function useAvatars(): Avatars {
 }
 
 /** Printers installed in Windows (default first), plus a way to look again. */
-export function usePrinters(): { printers: PrinterInfo[]; loading: boolean; refresh: () => void } {
+export function usePrinters(): { printers: PrinterInfo[]; loading: boolean; refresh: () => void; reload: () => void } {
   const [printers, setPrinters] = useState<PrinterInfo[]>([])
   const [loading, setLoading] = useState(true)
   const load = useCallback((refresh: boolean) => {
@@ -46,5 +46,9 @@ export function usePrinters(): { printers: PrinterInfo[]; loading: boolean; refr
       .finally(() => setLoading(false))
   }, [])
   useEffect(() => load(false), [load])
-  return { printers, loading, refresh: () => load(true) }
+  // refresh: ask Windows again. reload: pick up the app's latest list (e.g. after the loading screen refreshed it).
+  // Both keep the same identity between renders, so they're safe to depend on.
+  const refresh = useCallback(() => load(true), [load])
+  const reload = useCallback(() => load(false), [load])
+  return { printers, loading, refresh, reload }
 }

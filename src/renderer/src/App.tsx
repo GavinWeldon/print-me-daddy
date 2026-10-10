@@ -13,16 +13,29 @@ export default function App() {
   const chat = useChat()
   const settings = useSettings()
   const avatars = useAvatars()
-  const { printers, refresh: refreshPrinters } = usePrinters()
+  const { printers, refresh: refreshPrinters, reload: reloadPrinters } = usePrinters()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
-  // The loading screen shows once each time the app starts.
+  // The loading screen shows when the app starts and every time the window is reopened.
   const [loading, setLoading] = useState(true)
-  const finishLoading = useCallback(() => setLoading(false), [])
+  const [loadingRun, setLoadingRun] = useState(0)
+  const finishLoading = useCallback(() => {
+    setLoading(false)
+    reloadPrinters()
+  }, [reloadPrinters])
   // Drag events fire for every child element, so count enters/leaves to know when it really left.
   const dragDepth = useRef(0)
 
   useEffect(() => window.pmd.onOpenSettings(() => setSettingsOpen(true)), [])
+  useEffect(
+    () =>
+      window.pmd.onWindowClosed(() => {
+        setSettingsOpen(false)
+        setLoadingRun((n) => n + 1)
+        setLoading(true)
+      }),
+    []
+  )
 
   const hostName = settings?.hostName ?? 'Paige'
   const hasFiles = (e: DragEvent) => e.dataTransfer.types.includes('Files')
@@ -99,7 +112,7 @@ export default function App() {
         </div>
       </div>
 
-      {loading && <Splash onDone={finishLoading} />}
+      {loading && <Splash key={loadingRun} onDone={finishLoading} />}
 
       {settingsOpen && settings && (
         <SettingsPanel settings={settings} printers={printers} onRefreshPrinters={refreshPrinters} onClose={() => setSettingsOpen(false)} />

@@ -33,6 +33,8 @@ const api: PmdApi = {
 
   openMain: (opts) => ipcRenderer.send('window:open-main', opts),
   onOpenSettings: (cb) => listen('ui:open-settings', cb),
+  onWindowClosed: (cb) => listen('ui:closed', cb),
+  isWindowOpen: () => ipcRenderer.invoke('window:is-open'),
   quickHide: () => ipcRenderer.send('quick:hide'),
   quickResize: (height) => ipcRenderer.send('quick:resize', height),
   onQuickShown: (cb) => listen('quick:shown', cb)

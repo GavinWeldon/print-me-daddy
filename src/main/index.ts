@@ -101,6 +101,8 @@ function createMainWindow(): void {
     if (quitting) return
     e.preventDefault()
     mainWindow?.hide()
+    // Get the loading screen ready for next time the window opens.
+    mainWindow?.webContents.send('ui:closed')
     if (!shownTrayHint) {
       shownTrayHint = true
       const s = settings.get()
@@ -279,6 +281,8 @@ function registerIpc(): void {
   ipcMain.handle('job:cancel', (_e, id: unknown) => desk.cancel(String(id)))
   ipcMain.handle('print:test-page', (_e, printer: unknown) => desk.testPage(typeof printer === 'string' ? printer : null))
 
+  // The loading screen waits until the main window is really open (not just "visible" to the browser engine).
+  ipcMain.handle('window:is-open', () => !!mainWindow && mainWindow.isVisible() && !mainWindow.isMinimized())
   ipcMain.on('window:open-main', (_e, opts?: { settings?: boolean }) => showMain(opts))
   ipcMain.on('quick:hide', () => quickWindow?.hide())
   ipcMain.on('quick:resize', (_e, height: number) => {

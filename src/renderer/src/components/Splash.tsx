@@ -14,6 +14,11 @@ interface Step {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** Resolves once the window is actually open (the screen is prepared while it's closed to the tray). */
+async function whenWindowOpen(isAlive: () => boolean): Promise<void> {
+  while (isAlive() && !(await window.pmd.isWindowOpen().catch(() => true))) await sleep(150)
+}
+
 /**
  * The loading screen: the owner's picture with a live progress bar.
  * It genuinely waits for the printer list and Paige's pictures, but always
@@ -31,7 +36,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
     const steps: Step[] = [
       { to: 17, ms: 900, text: 'Warming up the printer…' },
       { to: 21, ms: 550, text: 'Warming up the printer…' },
-      { to: 47, ms: 1400, text: 'Finding your printers…', work: () => window.pmd.listPrinters().catch(() => null) },
+      { to: 47, ms: 1400, text: 'Finding your printers…', work: () => window.pmd.listPrinters(true).catch(() => null) },
       { to: 70, ms: 1150, text: 'Doing Paige’s make-up…', work: () => window.pmd.getAvatars().catch(() => null) },
       { to: 72, ms: 650, text: 'Doing Paige’s make-up…' },
       { to: 94, ms: 1100, text: 'Polishing the paper tray…' },
@@ -57,6 +62,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
       })
 
     ;(async () => {
+      await whenWindowOpen(() => alive)
       for (const step of steps) {
         if (!alive || skipped.current) break
         setText(step.text)

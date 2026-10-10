@@ -130,6 +130,9 @@ export interface PmdApi {
 
   openMain(opts?: { settings?: boolean }): void
   onOpenSettings(cb: () => void): () => void
+  /** The window was closed to the tray (the loading screen plays when it reopens). */
+  onWindowClosed(cb: () => void): () => void
+  isWindowOpen(): Promise<boolean>
   quickHide(): void
   quickResize(height: number): void
   onQuickShown(cb: () => void): () => void
