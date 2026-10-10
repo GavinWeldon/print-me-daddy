@@ -6,6 +6,7 @@ import { Composer } from './components/Composer'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Splash } from './components/Splash'
 import { ConfirmModal } from './components/ConfirmModal'
+import { DropBox } from './components/DropBox'
 import logoUrl from '../../../assets/brand/logo.webp'
 import printerUrl from '../../../assets/brand/printer.webp'
 
@@ -42,6 +43,12 @@ export default function App() {
   )
 
   const hostName = settings?.hostName ?? 'Paige'
+  // With the confirmation pop-up open, new files join that job; otherwise they start a new one.
+  const addFiles = (paths: string[]) => {
+    if (!paths.length) return
+    if (confirmJobId) window.pmd.updateJob(confirmJobId, { add: paths })
+    else window.pmd.filesDropped(paths)
+  }
   const hasFiles = (e: DragEvent) => e.dataTransfer.types.includes('Files')
 
   const onDragEnter = (e: DragEvent) => {
@@ -58,10 +65,11 @@ export default function App() {
     e.preventDefault()
     dragDepth.current = 0
     setDragging(false)
-    const paths = Array.from(e.dataTransfer.files)
-      .map((f) => window.pmd.getPathForFile(f))
-      .filter(Boolean)
-    if (paths.length) window.pmd.filesDropped(paths)
+    addFiles(
+      Array.from(e.dataTransfer.files)
+        .map((f) => window.pmd.getPathForFile(f))
+        .filter(Boolean)
+    )
   }
 
   return (
@@ -104,6 +112,7 @@ export default function App() {
               hostName={hostName}
               typing={chat.hostState === 'thinking'}
             />
+            <DropBox active={dragging && !confirmJobId} onFiles={addFiles} />
             <Composer hostName={hostName} onSend={(t) => window.pmd.sendMessage(t)} />
           </div>
         </section>
@@ -111,13 +120,13 @@ export default function App() {
 
       <div className="drop-overlay" aria-hidden={!dragging}>
         <div className="drop-card">
-          Drop it on me <span>♥</span>
-          <small>Let go to send these files to {hostName}</small>
+          {confirmJobId ? 'Add them to the list' : 'Drop it on me'} <span>♥</span>
+          <small>{confirmJobId ? 'Let go to add these files to this print job' : `Let go to send these files to ${hostName}`}</small>
         </div>
       </div>
 
       {confirmJobId && chat.jobs[confirmJobId] && (
-        <ConfirmModal job={chat.jobs[confirmJobId]} printers={printers} hostName={hostName} onClose={closeConfirm} />
+        <ConfirmModal job={chat.jobs[confirmJobId]} printers={printers} hostName={hostName} dragging={dragging} onAddFiles={addFiles} onClose={closeConfirm} />
       )}
 
       {loading && <Splash key={loadingRun} onDone={finishLoading} />}

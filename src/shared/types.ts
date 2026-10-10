@@ -161,6 +161,8 @@ export interface PmdApi {
   onChatChanged(cb: (s: ChatState) => void): () => void
 
   getPathForFile(file: File): string
+  /** Opens a Windows file picker for documents; returns the chosen files (empty if cancelled). */
+  pickFiles(): Promise<string[]>
 
   listPrinters(refresh?: boolean): Promise<PrinterInfo[]>
   updateJob(jobId: string, patch: JobPatch): Promise<void>

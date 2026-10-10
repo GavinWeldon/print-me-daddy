@@ -6,6 +6,9 @@ interface Props {
   job: PrintJob
   printers: PrinterInfo[]
   hostName: string
+  /** Files are being dragged over the window. */
+  dragging: boolean
+  onAddFiles: (paths: string[]) => void
   onClose: () => void
 }
 
@@ -14,7 +17,7 @@ interface Props {
  * with page counts. Closes once printing starts or the job is cancelled; the job
  * stays in the chat either way.
  */
-export function ConfirmModal({ job, printers, hostName, onClose }: Props) {
+export function ConfirmModal({ job, printers, hostName, dragging, onAddFiles, onClose }: Props) {
   useEffect(() => {
     if (job.status !== 'draft') onClose()
   }, [job.status, onClose])
@@ -38,7 +41,7 @@ export function ConfirmModal({ job, printers, hostName, onClose }: Props) {
             ✕
           </button>
         </header>
-        <JobCard job={job} printers={printers} variant="confirm" />
+        <JobCard job={job} printers={printers} variant="confirm" dragging={dragging} onAddFiles={onAddFiles} />
       </div>
     </div>
   )

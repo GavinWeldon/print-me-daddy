@@ -24,6 +24,7 @@ const api: PmdApi = {
   onChatChanged: (cb) => listen('chat:changed', cb),
 
   getPathForFile: (file) => webUtils.getPathForFile(file),
+  pickFiles: () => ipcRenderer.invoke('files:pick'),
 
   listPrinters: (refresh) => ipcRenderer.invoke('printers:list', refresh),
   updateJob: (jobId, patch) => ipcRenderer.invoke('job:update', jobId, patch),

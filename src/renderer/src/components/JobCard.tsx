@@ -3,12 +3,16 @@ import { PAGES_PER_SHEET, type JobPatch, type PrinterInfo, type PrintJob } from 
 import { sidesFor } from '../../../shared/pages'
 import { PrinterSelect } from './PrinterSelect'
 import { FileSearch } from './FileSearch'
+import { DropBox } from './DropBox'
 
 interface Props {
   job: PrintJob
   printers: PrinterInfo[]
   /** "confirm" is the pop-up shown before printing: adds folders, swaps, remove and search. */
   variant?: 'card' | 'confirm'
+  /** Pop-up only: files being dragged over the window, and how to add picked files. */
+  dragging?: boolean
+  onAddFiles?: (paths: string[]) => void
 }
 
 const STATUS_LABEL: Record<PrintJob['status'], string> = {
@@ -20,7 +24,7 @@ const STATUS_LABEL: Record<PrintJob['status'], string> = {
 }
 
 /** A print job: files in order (drag to reorder, tick to include), settings, and Print / Cancel. */
-export function JobCard({ job, printers, variant = 'card' }: Props) {
+export function JobCard({ job, printers, variant = 'card', dragging = false, onAddFiles }: Props) {
   const confirming = variant === 'confirm'
   const [dragId, setDragId] = useState<string | null>(null)
   const [confirmPages, setConfirmPages] = useState<number | null>(null)
@@ -128,7 +132,12 @@ export function JobCard({ job, printers, variant = 'card' }: Props) {
         ))}
       </ol>
 
-      {confirming && !locked && <FileSearch onAdd={(path) => update({ add: [path] })} exclude={job.files.map((f) => f.path)} />}
+      {confirming && !locked && (
+        <div className="job-add">
+          <FileSearch onAdd={(path) => update({ add: [path] })} exclude={job.files.map((f) => f.path)} />
+          {onAddFiles && <DropBox active={dragging} onFiles={onAddFiles} label="Drop more files here" />}
+        </div>
+      )}
 
       <div className="job-settings">
         <label>

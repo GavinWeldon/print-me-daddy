@@ -305,6 +305,17 @@ function registerIpc(): void {
   ipcMain.handle('job:update', (_e, id: unknown, patch: unknown) => desk.update(String(id), (patch ?? {}) as JobPatch))
   ipcMain.handle('job:print', (_e, id: unknown, confirmed: unknown) => desk.print(String(id), confirmed === true))
   ipcMain.handle('job:cancel', (_e, id: unknown) => desk.cancel(String(id)))
+  ipcMain.handle('files:pick', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      title: 'Choose files to print',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Printable files', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'bmp', 'ico', 'doc', 'docx', 'rtf', 'odt', 'ppt', 'pptx', 'odp', 'xls', 'xlsx', 'ods', 'csv'] },
+        { name: 'All files', extensions: ['*'] }
+      ]
+    })
+    return result.canceled ? [] : result.filePaths
+  })
   ipcMain.handle('library:status', () => library.status())
   ipcMain.handle('library:pick-folders', async () => {
     const result = await dialog.showOpenDialog(mainWindow!, { title: 'Where do your documents live?', properties: ['openDirectory', 'multiSelections'] })
