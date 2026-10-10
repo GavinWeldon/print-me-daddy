@@ -7,6 +7,7 @@ import type { SettingsStore } from '../settings'
 import * as host from '../host/personality'
 import { DEFAULT_PRINT_OPTIONS, type FileHit, type JobFile, type JobPatch, type PrintJob, type PrintOptions, type PrintResult } from '../../shared/types'
 import { countPages, kindOf } from './documents'
+import { applyOptions } from '../../shared/options'
 import { resolvePrinter } from './printers'
 import { CancelledError, jobPageTotal, PAGE_RANGES, printFile, removeFromQueue, runJob } from './runner'
 import { makeTestPage } from './testPage'
@@ -67,7 +68,8 @@ export class PrintDesk {
       id: randomUUID(),
       files,
       printerName: this.settings.get().printerName,
-      options: { ...DEFAULT_PRINT_OPTIONS, ...options },
+      // Your default print settings first, then anything the request asked for.
+      options: { ...DEFAULT_PRINT_OPTIONS, ...this.settings.get().printDefaults, ...options },
       status: 'draft',
       compact
     }
@@ -114,13 +116,7 @@ export class PrintDesk {
       if (patch.included) {
         files = files.map((f) => (f.id in patch.included! && !f.problem ? { ...f, included: !!patch.included![f.id] } : f))
       }
-      const o = { ...job.options }
-      const p = patch.options ?? {}
-      if (typeof p.copies === 'number' && Number.isFinite(p.copies)) o.copies = Math.min(99, Math.max(1, Math.round(p.copies)))
-      if (p.color === 'color' || p.color === 'mono') o.color = p.color
-      if (p.duplex === 'off' || p.duplex === 'long' || p.duplex === 'short') o.duplex = p.duplex
-      if (typeof p.pages === 'string') o.pages = p.pages.slice(0, 60)
-      if ([1, 2, 4, 6, 9].includes(p.pagesPerSheet as number)) o.pagesPerSheet = p.pagesPerSheet as PrintOptions['pagesPerSheet']
+      const o = applyOptions(job.options, patch.options)
       const printerName = patch.printerName === null || typeof patch.printerName === 'string' ? patch.printerName : job.printerName
       // Editing a finished job turns it back into a draft you can print again.
       return { ...job, files, options: o, printerName, status: 'draft', error: undefined, progress: undefined }

@@ -51,7 +51,7 @@ export class Assistant {
       )
     )
 
-    const options = { ...DEFAULT_PRINT_OPTIONS, ...request.options }
+    const options = { ...DEFAULT_PRINT_OPTIONS, ...s.printDefaults, ...request.options }
     const names = jobFiles.map((f) => f.name)
     const settingsText = host.describeOptions(options)
     const allConfident = found.every((r) => r.confident) && !missing.length

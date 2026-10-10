@@ -14,6 +14,8 @@ export interface Settings {
   printerName: string | null
   /** Folders whose files Paige can find by name. */
   sourceFolders: string[]
+  /** What every new print job starts with (typed requests can still override them). */
+  printDefaults: PrintDefaults
   /** Small, confident typed requests print straight away without a job card. */
   quickMode: boolean
   quickModePageLimit: number
@@ -53,11 +55,28 @@ export interface PrintOptions {
   pages: string
   /** Pages shrunk onto each side of paper. */
   pagesPerSheet: 1 | 2 | 4 | 6 | 9
+  /** Paper name as the printer knows it (e.g. "A4"); empty means the printer's own default. */
+  paperSize: string
+  /** shrink: only shrink pages that are too big; fit: always fill the page; noscale: actual size. */
+  scale: 'shrink' | 'fit' | 'noscale'
+  orientation: 'auto' | 'portrait' | 'landscape'
 }
+
+/** The settings a new job starts with (everything except page ranges, which are per job). */
+export type PrintDefaults = Omit<PrintOptions, 'pages'>
 
 export const PAGES_PER_SHEET = [1, 2, 4, 6, 9] as const
 
-export const DEFAULT_PRINT_OPTIONS: PrintOptions = { copies: 1, color: 'color', duplex: 'off', pages: '', pagesPerSheet: 1 }
+export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
+  copies: 1,
+  color: 'color',
+  duplex: 'off',
+  pages: '',
+  pagesPerSheet: 1,
+  paperSize: '',
+  scale: 'shrink',
+  orientation: 'auto'
+}
 
 export interface JobFile {
   id: string
@@ -172,6 +191,10 @@ export interface PmdApi {
   printJob(jobId: string, confirmed?: boolean): Promise<PrintResult>
   cancelJob(jobId: string): Promise<void>
   printTestPage(printerName: string | null): Promise<PrintResult>
+  /** Paper sizes the printer supports (empty if unknown). */
+  getPaperSizes(printerName: string | null): Promise<string[]>
+  /** Opens one of Windows' own windows for a printer. */
+  openPrinterWindow(printerName: string | null, which: 'preferences' | 'properties' | 'queue'): Promise<void>
 
   /** Opens a folder picker; returns the chosen folders (empty if cancelled). */
   pickFolders(): Promise<string[]>

@@ -62,3 +62,19 @@ export function useIndexStatus(): IndexStatus | null {
   }, [])
   return status
 }
+
+/** Paper sizes the given printer supports (null = Windows default printer). */
+export function usePaperSizes(printerName: string | null): string[] {
+  const [sizes, setSizes] = useState<string[]>([])
+  useEffect(() => {
+    let current = true
+    window.pmd
+      .getPaperSizes(printerName)
+      .then((s) => current && setSizes(s))
+      .catch(() => current && setSizes([]))
+    return () => {
+      current = false
+    }
+  }, [printerName])
+  return sizes
+}

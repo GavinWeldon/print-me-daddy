@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import type { AppInfo, PrinterInfo, Settings } from '../../../shared/types'
 import { HotkeyInput } from './HotkeyInput'
 import { PrinterSelect } from './PrinterSelect'
-import { useIndexStatus } from '../hooks'
+import { useIndexStatus, usePaperSizes } from '../hooks'
+import { PrintOptionsFields } from './PrintOptionsFields'
 
 interface Props {
   settings: Settings
@@ -17,6 +18,8 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
   const [saved, setSaved] = useState(false)
   const [info, setInfo] = useState<AppInfo | null>(null)
   const index = useIndexStatus()
+  const paperSizes = usePaperSizes(settings.printerName)
+  const [advanced, setAdvanced] = useState(false)
   const addFolders = async () => {
     const picked = await window.pmd.pickFolders()
     if (picked.length) update({ sourceFolders: [...settings.sourceFolders, ...picked] })
@@ -76,6 +79,41 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
             </button>
           </div>
           {testState.message && <small className={testState.ok === false ? 'warn' : testState.ok ? 'ok' : ''}>{testState.message}</small>}
+
+          <button type="button" className={`more-toggle ${advanced ? 'is-open' : ''}`} onClick={() => setAdvanced(!advanced)}>
+            {advanced ? '▾' : '▸'} Advanced printer settings
+          </button>
+          {advanced && (
+            <div className="advanced">
+              <small>
+                Every new print job starts with these. Anything you type (like “in black and white”) or change on a job
+                still wins.
+              </small>
+              <div className="job-settings">
+                <PrintOptionsFields
+                  options={settings.printDefaults}
+                  onChange={(patch) => update({ printDefaults: { ...settings.printDefaults, ...patch } })}
+                  paperSizes={paperSizes}
+                  openMore
+                />
+              </div>
+              <small>
+                Quality, paper type, borderless and other printer-specific settings live in your printer’s own Windows
+                settings. Whatever you set there becomes its default here too.
+              </small>
+              <div className="row wrap">
+                <button className="ghost-btn small" onClick={() => window.pmd.openPrinterWindow(settings.printerName, 'preferences')}>
+                  Printing preferences
+                </button>
+                <button className="ghost-btn small" onClick={() => window.pmd.openPrinterWindow(settings.printerName, 'properties')}>
+                  Printer properties
+                </button>
+                <button className="ghost-btn small" onClick={() => window.pmd.openPrinterWindow(settings.printerName, 'queue')}>
+                  Print queue
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="field">

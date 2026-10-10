@@ -33,6 +33,8 @@ const api: PmdApi = {
   printJob: (jobId, confirmed) => ipcRenderer.invoke('job:print', jobId, confirmed),
   cancelJob: (jobId) => ipcRenderer.invoke('job:cancel', jobId),
   printTestPage: (printerName) => ipcRenderer.invoke('print:test-page', printerName),
+  getPaperSizes: (printerName) => ipcRenderer.invoke('printers:paper-sizes', printerName),
+  openPrinterWindow: (printerName, which) => ipcRenderer.invoke('printers:open-window', printerName, which),
 
   pickFolders: () => ipcRenderer.invoke('library:pick-folders'),
   getIndexStatus: () => ipcRenderer.invoke('library:status'),

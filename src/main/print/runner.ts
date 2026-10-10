@@ -21,6 +21,16 @@ export function jobPageTotal(job: PrintJob): number {
   )
 }
 
+/**
+ * Printers give paper long names like `Letter 8.5"x11" 22x28cm`. SumatraPDF knows the
+ * standard ones by their short name, so use that when it's one of them; otherwise pass it as-is.
+ */
+function paperName(size: string): string | undefined {
+  if (!size.trim()) return undefined
+  const standard = size.match(/^(A[2-6]|letter|legal|tabloid|statement)\b/i)?.[1]
+  return standard ? standard.toLowerCase().replace(/^a/, 'A') : size
+}
+
 function toPrinterOptions(printer: string, o: PrintOptions, pageRange: boolean) {
   return {
     printer,
@@ -28,7 +38,9 @@ function toPrinterOptions(printer: string, o: PrintOptions, pageRange: boolean) 
     monochrome: o.color === 'mono',
     side: SIDE[o.duplex],
     pages: pageRange && o.pages.trim() ? o.pages.replace(/s+/g, '') : undefined,
-    scale: 'shrink' as const
+    scale: o.scale,
+    paperSize: paperName(o.paperSize),
+    orientation: o.orientation === 'auto' ? undefined : o.orientation
   }
 }
 

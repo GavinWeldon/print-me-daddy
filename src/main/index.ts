@@ -6,7 +6,8 @@ import { loadAvatars } from './avatars'
 import * as host from './host/personality'
 import { prettyHotkey } from '../shared/hotkey'
 import { PrintDesk } from './print/desk'
-import { listPrinters } from './print/printers'
+import { listPrinters, openPrinterWindow, paperSizes, resolvePrinter } from './print/printers'
+import { applyOptions } from '../shared/options'
 import { cleanScratch } from './print/documents'
 import { Library } from './library/library'
 import { Assistant } from './brain/assistant'
@@ -229,6 +230,7 @@ function updateSettings(patch: Partial<Settings>): SettingsUpdateResult {
   }
   if (typeof patch.startWithWindows === 'boolean') next.startWithWindows = patch.startWithWindows
   if (patch.printerName === null || typeof patch.printerName === 'string') next.printerName = patch.printerName
+  if (patch.printDefaults && typeof patch.printDefaults === 'object') next.printDefaults = applyOptions(prev.printDefaults, patch.printDefaults)
   if (typeof patch.quickMode === 'boolean') next.quickMode = patch.quickMode
   if (typeof patch.quickModePageLimit === 'number' && Number.isFinite(patch.quickModePageLimit)) {
     next.quickModePageLimit = Math.min(500, Math.max(1, Math.round(patch.quickModePageLimit)))
@@ -326,6 +328,14 @@ function registerIpc(): void {
       .slice(0, 8)
       .map(({ file }) => ({ path: file.path, name: file.name, folder: file.folder }))
   )
+  ipcMain.handle('printers:paper-sizes', async (_e, printer: unknown) => {
+    const target = await resolvePrinter(typeof printer === 'string' ? printer : null)
+    return 'name' in target ? paperSizes(target.name) : []
+  })
+  ipcMain.handle('printers:open-window', async (_e, printer: unknown, which: unknown) => {
+    const target = await resolvePrinter(typeof printer === 'string' ? printer : null)
+    if ('name' in target && (which === 'preferences' || which === 'properties' || which === 'queue')) openPrinterWindow(target.name, which)
+  })
   ipcMain.handle('print:test-page', (_e, printer: unknown) => desk.testPage(typeof printer === 'string' ? printer : null))
 
   // The loading screen waits until the main window is really open (not just "visible" to the browser engine).

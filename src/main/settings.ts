@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { existsSync, readFileSync, renameSync, writeFileSync, mkdirSync } from 'fs'
 import { dirname, join } from 'path'
 import type { Settings } from '../shared/types'
+import { DEFAULT_PRINT_DEFAULTS } from '../shared/options'
 
 export const DEFAULT_SETTINGS: Settings = {
   hostName: 'Paige',
@@ -9,6 +10,7 @@ export const DEFAULT_SETTINGS: Settings = {
   startWithWindows: false,
   sourceFolders: [],
   printerName: null,
+  printDefaults: { ...DEFAULT_PRINT_DEFAULTS },
   quickMode: false,
   quickModePageLimit: 20,
   firstRunComplete: false,
@@ -46,7 +48,8 @@ export class SettingsStore {
         saved.quickMode = false
         saved.settingsVersion = 2
       }
-      return { ...DEFAULT_SETTINGS, ...saved }
+      // Fill in any print defaults added since the file was saved.
+      return { ...DEFAULT_SETTINGS, ...saved, printDefaults: { ...DEFAULT_PRINT_DEFAULTS, ...(saved.printDefaults ?? {}) } }
     } catch {
       // A broken file shouldn't stop the app opening: keep a copy and start fresh.
       renameSync(this.file, this.file + '.broken')

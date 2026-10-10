@@ -1,5 +1,7 @@
 import { useState, type DragEvent } from 'react'
-import { PAGES_PER_SHEET, type JobPatch, type PrinterInfo, type PrintJob } from '../../../shared/types'
+import type { JobPatch, PrinterInfo, PrintJob } from '../../../shared/types'
+import { PrintOptionsFields } from './PrintOptionsFields'
+import { usePaperSizes } from '../hooks'
 import { sidesFor } from '../../../shared/pages'
 import { PrinterSelect } from './PrinterSelect'
 import { FileSearch } from './FileSearch'
@@ -26,6 +28,7 @@ const STATUS_LABEL: Record<PrintJob['status'], string> = {
 /** A print job: files in order (drag to reorder, tick to include), settings, and Print / Cancel. */
 export function JobCard({ job, printers, variant = 'card', dragging = false, onAddFiles }: Props) {
   const confirming = variant === 'confirm'
+  const paperSizes = usePaperSizes(job.printerName)
   const [dragId, setDragId] = useState<string | null>(null)
   const [confirmPages, setConfirmPages] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -144,64 +147,14 @@ export function JobCard({ job, printers, variant = 'card', dragging = false, onA
           <span>Printer</span>
           <PrinterSelect printers={printers} value={job.printerName} disabled={locked} onChange={(printerName) => update({ printerName })} />
         </label>
-        <label className="narrow">
-          <span>Copies</span>
-          <input
-            type="number"
-            min={1}
-            max={99}
-            value={job.options.copies}
-            disabled={locked}
-            onChange={(e) => update({ options: { copies: Number(e.target.value) || 1 } })}
-          />
-        </label>
-        <div className="seg" role="group" aria-label="Colour">
-          <span>Colour</span>
-          <div>
-            {(['color', 'mono'] as const).map((c) => (
-              <button key={c} className={job.options.color === c ? 'on' : ''} disabled={locked} onClick={() => update({ options: { color: c } })}>
-                {c === 'color' ? 'Colour' : 'B&W'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <label>
-          <span>Double-sided</span>
-          <select
-            className="select"
-            value={job.options.duplex}
-            disabled={locked}
-            onChange={(e) => update({ options: { duplex: e.target.value as PrintJob['options']['duplex'] } })}
-          >
-            <option value="off">Off</option>
-            <option value="long">Long edge (like a book)</option>
-            <option value="short">Short edge (flip up)</option>
-          </select>
-        </label>
-        <label className="narrow">
-          <span>Per sheet</span>
-          <select
-            className="select"
-            value={job.options.pagesPerSheet}
-            disabled={locked}
-            onChange={(e) => update({ options: { pagesPerSheet: Number(e.target.value) as PrintJob['options']['pagesPerSheet'] } })}
-          >
-            {PAGES_PER_SHEET.map((n) => (
-              <option key={n} value={n}>
-                {n === 1 ? '1 (normal)' : `${n} pages`}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Pages{job.files.length > 1 ? ' (each file)' : ''}</span>
-          <input
-            placeholder="All"
-            value={job.options.pages}
-            disabled={locked}
-            onChange={(e) => update({ options: { pages: e.target.value } })}
-          />
-        </label>
+        <PrintOptionsFields
+          options={job.options}
+          onChange={(options) => update({ options })}
+          paperSizes={paperSizes}
+          disabled={locked}
+          showPages
+          pagesLabel={`Pages${job.files.length > 1 ? ' (each file)' : ''}`}
+        />
       </div>
 
       {confirmPages !== null && (

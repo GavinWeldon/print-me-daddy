@@ -44,3 +44,30 @@ export async function resolvePrinter(chosen: string | null): Promise<{ name: str
   if (fallback) return { name: fallback.name }
   return list.length ? { name: list[0].name } : { error: 'No printers are installed in Windows yet.' }
 }
+
+/** Paper sizes a printer says it supports (e.g. "A4", "Letter", "Photo 4x6"), in its own order. */
+export function paperSizes(printer: string): Promise<string[]> {
+  const script = '(Get-CimInstance Win32_Printer | Where-Object { $_.Name -eq $env:PMD_PRINTER }).PrinterPaperNames | ConvertTo-Json -Compress'
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      { windowsHide: true, env: { ...process.env, PMD_PRINTER: printer } },
+      (err, stdout) => {
+        if (err || !stdout.trim()) return resolve([])
+        try {
+          const raw = JSON.parse(stdout)
+          resolve([...new Set((Array.isArray(raw) ? raw : [raw]).filter((n): n is string => typeof n === 'string' && !!n.trim()))])
+        } catch {
+          resolve([])
+        }
+      }
+    )
+  })
+}
+
+/** Opens Windows' own printing preferences, printer properties, or print queue window for a printer. */
+export function openPrinterWindow(printer: string, which: 'preferences' | 'properties' | 'queue'): void {
+  const flag = { preferences: '/e', properties: '/p', queue: '/o' }[which]
+  execFile('rundll32.exe', ['printui.dll,PrintUIEntry', flag, '/n', printer], { windowsHide: false }, () => {})
+}
