@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useAvatars, useChat, usePrinters, useSettings } from './hooks'
 import { Host, HOST_STATUS } from './components/Host'
 import { MessageList } from './components/MessageList'
 import { Composer } from './components/Composer'
 import { SettingsPanel } from './components/SettingsPanel'
+import { Splash } from './components/Splash'
 import logoUrl from '../../../assets/brand/logo.webp'
 import printerUrl from '../../../assets/brand/printer.webp'
 
@@ -15,6 +16,9 @@ export default function App() {
   const { printers, refresh: refreshPrinters } = usePrinters()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
+  // The loading screen shows once each time the app starts.
+  const [loading, setLoading] = useState(true)
+  const finishLoading = useCallback(() => setLoading(false), [])
   // Drag events fire for every child element, so count enters/leaves to know when it really left.
   const dragDepth = useRef(0)
 
@@ -94,6 +98,8 @@ export default function App() {
           <small>Let go to send these files to {hostName}</small>
         </div>
       </div>
+
+      {loading && <Splash onDone={finishLoading} />}
 
       {settingsOpen && settings && (
         <SettingsPanel settings={settings} printers={printers} onRefreshPrinters={refreshPrinters} onClose={() => setSettingsOpen(false)} />
