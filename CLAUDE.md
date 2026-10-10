@@ -21,5 +21,6 @@ Electron + React + TypeScript + Vite (electron-vite) Windows app. Owner is a beg
 - Nothing tied to one printer brand.
 
 ## Gotchas
+- The owner's Desktop and Start menu shortcuts point at `release/win-unpacked/Print Me Daddy.exe` (made with `npm run pack`). After a phase, quit the app from the tray and re-run `npm run pack` so the shortcuts open the latest version. The real installer comes in Phase 7.
 - Electron 44 doesn't download its binary on install by itself; the root `postinstall` runs `install-electron`.
 - electron-vite 5 supports Vite up to 7, so don't bump Vite to 8 until electron-vite supports it.

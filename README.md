@@ -47,6 +47,7 @@ npm install      # first time only; also downloads Electron
 npm run dev      # run the app with live reload
 npm run typecheck
 npm run build
+npm run pack      # build a standalone copy in release/win-unpacked (quit the app first)
 ```
 
 ## Roadmap
