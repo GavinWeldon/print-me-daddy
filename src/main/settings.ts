@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sourceFolders: [],
   printerName: null,
   printDefaults: { ...DEFAULT_PRINT_DEFAULTS },
+  smartMode: true,
   quickMode: false,
   quickModePageLimit: 20,
   firstRunComplete: false,

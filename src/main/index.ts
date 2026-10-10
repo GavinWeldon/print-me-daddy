@@ -12,6 +12,7 @@ import { readPrinterFeatures, writePrinterFeature } from './print/capabilities'
 import { cleanScratch } from './print/documents'
 import { Library } from './library/library'
 import { Assistant } from './brain/assistant'
+import { ClaudeCodeProvider } from './brain/smart/claudeCode'
 import { rankFiles } from './brain/fastPath'
 import { existsSync, statSync } from 'fs'
 import { HOST_STATES, type HostState, type JobPatch, type Settings, type SettingsUpdateResult } from '../shared/types'
@@ -30,6 +31,7 @@ let chat: Chat
 let desk: PrintDesk
 let library: Library
 let assistant: Assistant
+const smart = new ClaudeCodeProvider()
 let mainWindow: BrowserWindow | null = null
 let quickWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -54,7 +56,7 @@ function start(): void {
   library.on('status', (status) => broadcast('library:status', status))
   library.setFolders(settings.get().sourceFolders)
   desk.folderOf = (path) => library.list().find((f) => f.path === path)?.folder
-  assistant = new Assistant(chat, desk, library, settings, (jobId) => {
+  assistant = new Assistant(chat, desk, library, settings, smart, (jobId) => {
     showMain()
     mainWindow?.webContents.send('job:confirm', jobId)
   })
@@ -233,6 +235,7 @@ function updateSettings(patch: Partial<Settings>): SettingsUpdateResult {
   if (patch.printerName === null || typeof patch.printerName === 'string') next.printerName = patch.printerName
   if (patch.printDefaults && typeof patch.printDefaults === 'object') next.printDefaults = applyOptions(prev.printDefaults, patch.printDefaults)
   if (typeof patch.quickMode === 'boolean') next.quickMode = patch.quickMode
+  if (typeof patch.smartMode === 'boolean') next.smartMode = patch.smartMode
   if (typeof patch.quickModePageLimit === 'number' && Number.isFinite(patch.quickModePageLimit)) {
     next.quickModePageLimit = Math.min(500, Math.max(1, Math.round(patch.quickModePageLimit)))
   }
@@ -319,6 +322,7 @@ function registerIpc(): void {
     })
     return result.canceled ? [] : result.filePaths
   })
+  ipcMain.handle('smart:status', (_e, refresh: unknown) => smart.status(refresh === true))
   ipcMain.handle('library:status', () => library.status())
   ipcMain.handle('library:pick-folders', async () => {
     const result = await dialog.showOpenDialog(mainWindow!, { title: 'Where do your documents live?', properties: ['openDirectory', 'multiSelections'] })

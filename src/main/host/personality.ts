@@ -41,6 +41,28 @@ export function tooComplex(): string {
   return `Ooh, that one needs my big brain, and she arrives in the next update. For now, tell me the files one by one ("print x, then y"), or drop them on me.`
 }
 
+export function smartThinking(): string {
+  return pick([
+    `Ooh, a thinker. Give me a sec to work this one out… 🤔`,
+    `Mm, let me put my big brain on. One moment, gorgeous.`,
+    `Tricky. I like tricky. Thinking…`
+  ])
+}
+
+export function smartUnavailable(reason?: string): string {
+  const why =
+    reason === 'not-installed'
+      ? "Claude Code isn't installed on this PC"
+      : reason === 'signed-out'
+        ? "Claude Code isn't signed in on this PC (run \"claude auth login\" once)"
+        : 'smart mode is switched off in Settings'
+  return `That one needs my big brain, darling, and she's not available: ${why}. Tell me the files one by one ("print x, then y") and I'll handle it.`
+}
+
+export function smartFailed(reason: string): string {
+  return `My big brain hiccupped (${reason}). Here's my best guess instead, so give it a careful look.`
+}
+
 export function mergeLater(): string {
   return `Stitching them into one PDF comes in a later update, so I'll print them one after another in that order instead.`
 }

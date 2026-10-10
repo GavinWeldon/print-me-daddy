@@ -38,6 +38,7 @@ const api: PmdApi = {
   getPrinterFeatures: (printerName, refresh) => ipcRenderer.invoke('printers:features', printerName, refresh),
   setPrinterFeature: (printerName, feature, option) => ipcRenderer.invoke('printers:set-feature', printerName, feature, option),
 
+  getSmartStatus: (refresh) => ipcRenderer.invoke('smart:status', refresh),
   pickFolders: () => ipcRenderer.invoke('library:pick-folders'),
   getIndexStatus: () => ipcRenderer.invoke('library:status'),
   onIndexStatus: (cb) => listen('library:status', cb),

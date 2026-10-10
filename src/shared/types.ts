@@ -16,6 +16,8 @@ export interface Settings {
   sourceFolders: string[]
   /** What every new print job starts with (typed requests can still override them). */
   printDefaults: PrintDefaults
+  /** Use the smart path (Claude Code on this PC) for requests the fast path can't handle. */
+  smartMode: boolean
   /** Small, confident typed requests print straight away without a job card. */
   quickMode: boolean
   quickModePageLimit: number
@@ -130,6 +132,17 @@ export interface PrinterFeature {
   options: { name: string; label: string }[]
 }
 
+// ---------- Smart mode ----------
+
+export interface SmartStatus {
+  available: boolean
+  provider: string
+  /** The account signed in on THIS PC. */
+  account?: string
+  plan?: string
+  reason?: 'not-installed' | 'signed-out' | 'not-working'
+}
+
 // ---------- Folder index ----------
 
 export interface IndexStatus {
@@ -213,6 +226,7 @@ export interface PmdApi {
   setPrinterFeature(printerName: string | null, feature: string, option: string): Promise<{ ok: boolean; kept?: string; error?: string }>
 
   /** Opens a folder picker; returns the chosen folders (empty if cancelled). */
+  getSmartStatus(refresh?: boolean): Promise<SmartStatus>
   pickFolders(): Promise<string[]>
   getIndexStatus(): Promise<IndexStatus>
   onIndexStatus(cb: (s: IndexStatus) => void): () => void

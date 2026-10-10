@@ -5,6 +5,7 @@ import { PrinterSelect } from './PrinterSelect'
 import { useIndexStatus, usePaperSizes } from '../hooks'
 import { PrintOptionsFields } from './PrintOptionsFields'
 import { PrinterFeatures } from './PrinterFeatures'
+import { SmartModeField } from './SmartModeField'
 
 interface Props {
   settings: Settings
@@ -147,6 +148,8 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
             </small>
           )}
         </div>
+
+        <SmartModeField enabled={settings.smartMode} onToggle={(smartMode) => update({ smartMode })} />
 
         <div className="field">
           <span>Quick mode</span>

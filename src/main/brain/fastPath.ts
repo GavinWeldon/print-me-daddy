@@ -12,6 +12,8 @@ export interface ParsedRequest {
   wantsMerge: boolean
   /** Needs real understanding (pairing, "after each", vague descriptions): a job for the smart path. */
   tooComplex: boolean
+  /** The request with the "print" verb and settings words taken out. */
+  body: string
 }
 
 const COMPLEX = /\b(?:after|before|between)\s+(?:each|every)\b|\beach\s+one\b|\bwith\s+(?:the|its|their)\s+\w+\s+(?:after|before|next)\b|\bpair(?:ed)?\b|\bmatching\b|\bcorresponding\b|\bthe\s+one\s+(?:about|with|where|that)\b|\bsomething\b|\bwhichever\b/
@@ -82,7 +84,7 @@ export function parseRequest(raw: string): ParsedRequest {
     .map((c) => c.replace(/^(?:and|&)\s+/, '').trim())
     .filter((c) => c && !/^(?:and|&|the|my|it|them)$/.test(c))
 
-  return { isPrint, chunks, options, wantsMerge, tooComplex: COMPLEX.test(body) }
+  return { isPrint, chunks, options, wantsMerge, tooComplex: COMPLEX.test(body), body }
 }
 
 // ---------- Matching names to files ----------
