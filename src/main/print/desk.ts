@@ -11,6 +11,7 @@ import { applyOptions } from '../../shared/options'
 import { resolvePrinter } from './printers'
 import { CancelledError, jobPageTotal, PAGE_RANGES, printFile, removeFromQueue, runJob } from './runner'
 import { makeTestPage } from './testPage'
+import { applyForOneJob } from './capabilities'
 
 /** Jobs bigger than this (pages × copies) need a second "yes, really". */
 const BIG_JOB = 200
@@ -149,7 +150,13 @@ export class PrintDesk {
     this.chat.setHostState('printing')
     this.chat.add('host', host.printing(printer))
 
+    // The job's own printer settings (e.g. high quality) apply for this job only, then go back.
+    let restore: () => Promise<void> = async () => {}
     try {
+      if (Object.keys(job.options.printerFeatures).length) {
+        this.chat.updateJob(id, (j) => ({ ...j, progress: 'Setting up the printer…' }))
+        restore = await applyForOneJob(printer, job.options.printerFeatures).catch(() => async () => {})
+      }
       await runJob(job, printer, (progress) => this.chat.updateJob(id, (j) => ({ ...j, progress })), () => this.cancelRequested.has(id), run.sent)
       if (this.cancelRequested.has(id)) throw new CancelledError()
       this.chat.updateJob(id, (j) => ({ ...j, status: 'done', progress: undefined }))
@@ -169,6 +176,7 @@ export class PrintDesk {
       this.showError()
       return { ok: false, error: reason }
     } finally {
+      await restore()
       this.running.delete(id)
       this.cancelRequested.delete(id)
     }

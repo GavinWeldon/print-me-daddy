@@ -8,7 +8,7 @@ import { prettyHotkey } from '../shared/hotkey'
 import { PrintDesk } from './print/desk'
 import { listPrinters, openPrinterWindow, paperSizes, resolvePrinter } from './print/printers'
 import { applyOptions } from '../shared/options'
-import { readPrinterFeatures, writePrinterFeature } from './print/capabilities'
+import { printerSettingsEvents, readPrinterFeatures, writePrinterFeature } from './print/capabilities'
 import { cleanScratch } from './print/documents'
 import { Library } from './library/library'
 import { Assistant } from './brain/assistant'
@@ -55,6 +55,7 @@ function start(): void {
   library = new Library()
   library.on('status', (status) => broadcast('library:status', status))
   library.setFolders(settings.get().sourceFolders)
+  printerSettingsEvents.on('changed', (printer: string) => broadcast('printer:features-changed', printer))
   desk.folderOf = (path) => library.list().find((f) => f.path === path)?.folder
   assistant = new Assistant(chat, desk, library, settings, smart, (jobId) => {
     showMain()

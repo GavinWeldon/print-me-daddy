@@ -30,6 +30,7 @@ export function PrinterFeatures({ printerName }: Props) {
   )
   useEffect(() => {
     load()
+    return window.pmd.onPrinterFeaturesChanged(() => load(true))
   }, [load])
 
   const change = async (feature: PrinterFeature, option: string) => {

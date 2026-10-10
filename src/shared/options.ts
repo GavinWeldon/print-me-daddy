@@ -15,6 +15,14 @@ export function applyOptions<T extends Partial<PrintOptions>>(base: T, patch: Pa
   if (typeof p.paperSize === 'string') o.paperSize = p.paperSize.slice(0, 80)
   if (p.scale === 'shrink' || p.scale === 'fit' || p.scale === 'noscale') o.scale = p.scale
   if (p.orientation === 'auto' || p.orientation === 'portrait' || p.orientation === 'landscape') o.orientation = p.orientation
+  if (p.printerFeatures && typeof p.printerFeatures === 'object') {
+    // A small map of the printer's own settings; empty values mean "use the printer's default".
+    o.printerFeatures = Object.fromEntries(
+      Object.entries(p.printerFeatures)
+        .filter(([k, v]) => typeof k === 'string' && typeof v === 'string' && k.length < 100 && v.length > 0 && v.length < 100)
+        .slice(0, 20)
+    )
+  }
   return o
 }
 

@@ -1,6 +1,7 @@
 // The fast path: understands simple print requests with no AI at all.
 // "print my CV twice, double-sided" / "print x, then y, then z in that order in black and white"
 import type { PrintOptions } from '../../shared/types'
+import { BORDERLESS, QUALITY, QUALITY_OPTIONS } from '../../shared/printerWords'
 import type { LibraryFile } from '../library/library'
 
 export interface ParsedRequest {
@@ -14,6 +15,10 @@ export interface ParsedRequest {
   tooComplex: boolean
   /** The request with the "print" verb and settings words taken out. */
   body: string
+  /** "switch to standard quality" etc.: change the printer's settings from now on (no files). */
+  settingsCommand: boolean
+  /** "what quality are you on?" */
+  asksPrinterSettings: boolean
 }
 
 const COMPLEX = /\b(?:after|before|between)\s+(?:each|every)\b|\beach\s+one\b|\bwith\s+(?:the|its|their)\s+\w+\s+(?:after|before|next)\b|\bpair(?:ed)?\b|\bmatching\b|\bcorresponding\b|\bthe\s+one\s+(?:about|with|where|that)\b|\bsomething\b|\bwhichever\b/
@@ -34,6 +39,16 @@ function takeSettings(text: string): { rest: string; options: Partial<PrintOptio
     }
   }
 
+  const feature = (name: string, option: string) => (options.printerFeatures = { ...(options.printerFeatures ?? {}), [name]: option })
+  take(/\b(?:in\s+|at\s+|on\s+)?(?:high|highest|best|top|max(?:imum)?|photo|fine)[\s-]+quality\b|\bhigh[\s-]?res\b|\bhq\b/, () => feature(QUALITY, QUALITY_OPTIONS.high))
+  take(/\b(?:in\s+|at\s+|on\s+)?(?:standard|normal|regular|medium)[\s-]+quality\b/, () => feature(QUALITY, QUALITY_OPTIONS.normal))
+  take(/\b(?:in\s+|at\s+|on\s+)?(?:draft|fast|quick|economy|eco|low(?:est)?)[\s-]+(?:quality|mode)\b|\b(?:in\s+|at\s+|on\s+)?(?:draft|ink[\s-]?sav(?:er|ing))(?:\s+mode)?\b/, () =>
+    feature(QUALITY, QUALITY_OPTIONS.draft)
+  )
+  take(/\b(?:quality\s+(?:to\s+)?)(high|standard|normal|draft)\b/, (m) =>
+    feature(QUALITY, m[1] === 'high' ? QUALITY_OPTIONS.high : m[1] === 'draft' ? QUALITY_OPTIONS.draft : QUALITY_OPTIONS.normal)
+  )
+  take(/\b(?:with\s+)?(?:borderless|no\s+borders?|edge[\s-]to[\s-]edge|full[\s-]bleed)\b/, () => feature(BORDERLESS, 'psk:Borderless'))
   take(/\b(?:in\s+)?(?:black\s*(?:and|&|n)\s*white|b\s*&\s*w|b\/w|greyscale|grayscale|monochrome|mono)\b/, () => (options.color = 'mono'))
   take(/\b(?:in\s+)?(?:full\s+)?colou?r(?:ed)?\b/, () => (options.color ??= 'color'))
   take(/\b(?:double|two|2)[\s-]?sided\b(?:\s*,?\s*(?:flip(?:ped)?\s+on\s+)?(?:the\s+)?short\s+edge)?|\bboth\s+sides\b|\bduplex\b/, (m) =>
@@ -68,7 +83,7 @@ export function parseRequest(raw: string): ParsedRequest {
     .replace(/[“”]/g, '"')
     .replace(/\s+/g, ' ')
     .trim()
-  const isPrint = /\bprint(?:s|ing)?\b|\bprint\s*out\b/.test(text)
+  const isPrint = /\bprint(?:s|ing)?\b(?!\s+(?:quality|settings?|mode|preferences?))|\bprint\s*out\b/.test(text)
   const { rest, options, wantsMerge } = takeSettings(text)
 
   const body = rest
@@ -81,10 +96,13 @@ export function parseRequest(raw: string): ParsedRequest {
   // Strong separators keep their order: "x, then y; followed by z".
   const chunks = body
     .split(/\s*(?:,|;|\band\s+then\b|\bthen\b|\bfollowed\s+by\b|\bafter\s+that\b|\bnext\b)\s*/)
-    .map((c) => c.replace(/^(?:and|&)\s+/, '').trim())
+    .map((c) => c.replace(/^(?:and|&)\s+/, '').replace(/\s+(?:in|at|on|with|as|using)$/, '').trim())
     .filter((c) => c && !/^(?:and|&|the|my|it|them)$/.test(c))
 
-  return { isPrint, chunks, options, wantsMerge, tooComplex: COMPLEX.test(body), body }
+  const settingsCommand =
+    !isPrint && !!options.printerFeatures && /\b(?:set|change|switch|make|put|use|turn|go|always)\b|\bfrom now on\b|\bby default\b/.test(text)
+  const asksPrinterSettings = !isPrint && !settingsCommand && /\b(?:what|which|current|tell me)\b.*\b(?:quality|settings?|paper|borderless|ink)\b/.test(text)
+  return { isPrint, chunks, options, wantsMerge, tooComplex: COMPLEX.test(body), body, settingsCommand, asksPrinterSettings }
 }
 
 // ---------- Matching names to files ----------

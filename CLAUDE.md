@@ -28,6 +28,7 @@ Electron + React + TypeScript + Vite (electron-vite) Windows app. Owner is a beg
 - Nothing tied to one printer brand.
 
 ## Gotchas
+- Printer settings (capabilities.ts) must open the queue with PrintSystemDesiredAccess.UsePrinter, or UserPrintTicket.Commit() silently doesn't persist. Per-job printer settings are applied with applyForOneJob() and restored after the job.
 - Don't use pdf-to-printer's `getPrinters()`/`getDefaultPrinter()`: they crash on some virtual printers (OneNote). Use `src/main/print/printers.ts`.
 - SumatraPDF must stay unpacked from the asar (`build.asarUnpack` in package.json).
 - Printing logic can be tested without paper by bundling a harness with esbuild (`--external:electron`) and running it with `npx electron`.

@@ -62,6 +62,8 @@ export interface PrintOptions {
   /** shrink: only shrink pages that are too big; fit: always fill the page; noscale: actual size. */
   scale: 'shrink' | 'fit' | 'noscale'
   orientation: 'auto' | 'portrait' | 'landscape'
+  /** The printer's own settings for this job only, e.g. { "psk:PageOutputQuality": "psk:High" }. */
+  printerFeatures: Record<string, string>
 }
 
 /** The settings a new job starts with (everything except page ranges, which are per job). */
@@ -77,7 +79,8 @@ export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   pagesPerSheet: 1,
   paperSize: '',
   scale: 'shrink',
-  orientation: 'auto'
+  orientation: 'auto',
+  printerFeatures: {}
 }
 
 export interface JobFile {
@@ -224,6 +227,8 @@ export interface PmdApi {
   getPrinterFeatures(printerName: string | null, refresh?: boolean): Promise<{ printer: string; features: PrinterFeature[] } | { error: string }>
   /** Saves one of the printer's own settings; returns the option it kept. */
   setPrinterFeature(printerName: string | null, feature: string, option: string): Promise<{ ok: boolean; kept?: string; error?: string }>
+  /** A printer's own settings changed (from the panel, Paige, or a job). */
+  onPrinterFeaturesChanged(cb: (printer: string) => void): () => void
 
   /** Opens a folder picker; returns the chosen folders (empty if cancelled). */
   getSmartStatus(refresh?: boolean): Promise<SmartStatus>

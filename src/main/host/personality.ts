@@ -1,6 +1,8 @@
 // Everything the host says lives here, so her voice is easy to tweak.
 // Personality: confident, flirty, cheeky, funny, always helpful, never explicit.
 
+import { describePrinterFeatures } from '../../shared/printerWords'
+
 function pick(lines: string[]): string {
   return lines[Math.floor(Math.random() * lines.length)]
 }
@@ -63,12 +65,34 @@ export function smartFailed(reason: string): string {
   return `My big brain hiccupped (${reason}). Here's my best guess instead, so give it a careful look.`
 }
 
+export function printerSettingsChanged(what: string[], printer: string): string {
+  return pick([
+    `Done: ${what.join(' and ')} from now on, on ${printer}. 💋`,
+    `Switched ${printer} to ${what.join(' and ')}. Consider it handled.`
+  ])
+}
+
+export function printerSettingsNow(printer: string, lines: string[]): string {
+  return `Here's how ${printer} is set up right now, gorgeous:\n${lines.map((l) => '• ' + l).join('\n')}\nWant anything changed? Just say, e.g. "switch to high quality".`
+}
+
+export function printerSettingsFailed(reason: string): string {
+  return `I tried, but the printer said no: ${reason}`
+}
+
 export function mergeLater(): string {
   return `Stitching them into one PDF comes in a later update, so I'll print them one after another in that order instead.`
 }
 
 /** "2 copies, black & white, double-sided" */
-export function describeOptions(o: { copies: number; color: string; duplex: string; pages: string; pagesPerSheet: number }): string {
+export function describeOptions(o: {
+  copies: number
+  color: string
+  duplex: string
+  pages: string
+  pagesPerSheet: number
+  printerFeatures?: Record<string, string>
+}): string {
   const parts: string[] = []
   if (o.copies > 1) parts.push(`${o.copies} copies`)
   parts.push(o.color === 'mono' ? 'black & white' : 'colour')
@@ -76,6 +100,7 @@ export function describeOptions(o: { copies: number; color: string; duplex: stri
   if (o.duplex === 'short') parts.push('double-sided (short edge)')
   if (o.pages.trim()) parts.push(`pages ${o.pages}`)
   if (o.pagesPerSheet > 1) parts.push(`${o.pagesPerSheet} per sheet`)
+  parts.push(...describePrinterFeatures(o.printerFeatures ?? {}))
   return parts.join(', ')
 }
 

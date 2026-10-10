@@ -1,6 +1,7 @@
 import { useState, type DragEvent } from 'react'
 import type { JobPatch, PrinterInfo, PrintJob } from '../../../shared/types'
 import { PrintOptionsFields } from './PrintOptionsFields'
+import { JobPrinterFeatures } from './JobPrinterFeatures'
 import { usePaperSizes } from '../hooks'
 import { sidesFor } from '../../../shared/pages'
 import { PrinterSelect } from './PrinterSelect'
@@ -154,6 +155,15 @@ export function JobCard({ job, printers, variant = 'card', dragging = false, onA
           disabled={locked}
           showPages
           pagesLabel={`Pages${job.files.length > 1 ? ' (each file)' : ''}`}
+          openMore={Object.keys(job.options.printerFeatures).length > 0}
+          moreExtra={
+            <JobPrinterFeatures
+              printerName={job.printerName}
+              value={job.options.printerFeatures}
+              disabled={locked}
+              onChange={(printerFeatures) => update({ options: { printerFeatures } })}
+            />
+          }
         />
       </div>
 

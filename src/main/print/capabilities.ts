@@ -1,4 +1,5 @@
 import { execFile } from 'child_process'
+import { EventEmitter } from 'events'
 import type { PrinterFeature } from '../../shared/types'
 
 // Reads and changes a printer's own settings (quality, paper type, borderless, ink…)
@@ -13,8 +14,10 @@ const FIND_QUEUE = `
 Add-Type -AssemblyName System.Printing
 $server = New-Object System.Printing.LocalPrintServer
 $types = @([System.Printing.EnumeratedPrintQueueTypes]::Local, [System.Printing.EnumeratedPrintQueueTypes]::Connections)
-$q = $server.GetPrintQueues($types) | Where-Object { $_.FullName -eq $env:PMD_PRINTER -or $_.Name -eq $env:PMD_PRINTER } | Select-Object -First 1
-if (-not $q) { throw "Printer not found" }
+$found = $server.GetPrintQueues($types) | Where-Object { $_.FullName -eq $env:PMD_PRINTER -or $_.Name -eq $env:PMD_PRINTER } | Select-Object -First 1
+if (-not $found) { throw "Printer not found" }
+# Open it with "use printer" access: without it, saved preferences look fine but don't stick.
+$q = New-Object System.Printing.PrintQueue($found.HostingPrintServer, $found.Name, [System.Printing.PrintSystemDesiredAccess]::UsePrinter)
 $psf = '${PSF}'
 function Load-Xml($stream) { $d = New-Object System.Xml.XmlDocument; $stream.Position = 0; $d.Load($stream); return $d }
 function Ticket-Xml($q) { $t = $q.UserPrintTicket; if (-not $t) { $t = $q.DefaultPrintTicket }; return Load-Xml $t.GetXmlStream() }
@@ -44,9 +47,12 @@ $root.SetAttribute('version', '1')
 # Reuse the printer's own namespace prefixes so names like "ns0000:PageStamp" mean the same thing.
 foreach ($a in $caps.DocumentElement.Attributes) { if ($a.Name -like 'xmlns:*' -and $a.Name -ne 'xmlns:psf') { $root.SetAttribute($a.Name, $a.Value) } }
 [void]$doc.AppendChild($root)
-$feature = $doc.CreateElement('psf', 'Feature', $psf); $feature.SetAttribute('name', $env:PMD_FEATURE)
-$option = $doc.CreateElement('psf', 'Option', $psf); $option.SetAttribute('name', $env:PMD_OPTION)
-[void]$feature.AppendChild($option); [void]$root.AppendChild($feature)
+$changes = $env:PMD_CHANGES | ConvertFrom-Json
+foreach ($c in @($changes)) {
+  $feature = $doc.CreateElement('psf', 'Feature', $psf); $feature.SetAttribute('name', $c.feature)
+  $option = $doc.CreateElement('psf', 'Option', $psf); $option.SetAttribute('name', $c.option)
+  [void]$feature.AppendChild($option); [void]$root.AppendChild($feature)
+}
 $ms = New-Object System.IO.MemoryStream; $doc.Save($ms); $ms.Position = 0
 $change = New-Object System.Printing.PrintTicket($ms)
 $base = $q.UserPrintTicket; if (-not $base) { $base = $q.DefaultPrintTicket }
@@ -56,8 +62,12 @@ $q.Commit()
 # Report what the printer actually kept (it may adjust related settings).
 $ticket = Ticket-Xml $q
 $tns = New-Object System.Xml.XmlNamespaceManager($ticket.NameTable); $tns.AddNamespace('psf', $psf)
-$now = $ticket.SelectSingleNode("/psf:PrintTicket/psf:Feature[@name='$env:PMD_FEATURE']/psf:Option", $tns)
-if ($now) { $now.GetAttribute('name') } else { '' }
+$kept = @{}
+foreach ($c in @($changes)) {
+  $now = $ticket.SelectSingleNode("/psf:PrintTicket/psf:Feature[@name='$($c.feature)']/psf:Option", $tns)
+  $kept[$c.feature] = $(if ($now) { $now.GetAttribute('name') } else { '' })
+}
+ConvertTo-Json -InputObject $kept -Compress
 `
 
 function runPowerShell(script: string, env: Record<string, string>): Promise<string> {
@@ -182,6 +192,9 @@ function optionLabel(name: string, given: string): string {
 
 const cache = new Map<string, PrinterFeature[]>()
 
+/** Emits "changed" (printer name) whenever a printer's settings are saved. */
+export const printerSettingsEvents = new EventEmitter()
+
 /** Every changeable setting the printer has (one choice only, or already handled by the app, are left out). */
 export async function readPrinterFeatures(printer: string, refresh = false): Promise<PrinterFeature[]> {
   if (!refresh && cache.has(printer)) return cache.get(printer)!
@@ -206,11 +219,46 @@ export async function readPrinterFeatures(printer: string, refresh = false): Pro
   return features
 }
 
+/**
+ * Saves several settings as the printer's preferences in one go.
+ * Returns what the printer actually kept for each (it may adjust related settings).
+ */
+export async function writePrinterFeatures(printer: string, changes: Record<string, string>): Promise<Record<string, string>> {
+  const list = Object.entries(changes).map(([feature, option]) => ({ feature, option }))
+  if (!list.length) return {}
+  const out = await runPowerShell(WRITE, { PMD_PRINTER: printer, PMD_CHANGES: JSON.stringify(list) })
+  // Other settings may change too (e.g. borderless can change the paper type), so read fresh next time.
+  cache.delete(printer)
+  printerSettingsEvents.emit('changed', printer)
+  try {
+    return JSON.parse(out || '{}')
+  } catch {
+    return {}
+  }
+}
+
 /** Saves one setting as the printer's preference. Returns the option the printer actually kept. */
 export async function writePrinterFeature(printer: string, feature: string, option: string): Promise<string> {
-  const kept = await runPowerShell(WRITE, { PMD_PRINTER: printer, PMD_FEATURE: feature, PMD_OPTION: option })
-  const list = cache.get(printer)
-  // Other settings may change too (e.g. borderless can change the paper type), so read fresh next time.
-  if (list) cache.delete(printer)
-  return kept
+  return (await writePrinterFeatures(printer, { [feature]: option }))[feature] ?? ''
+}
+
+/**
+ * Switches printer settings for one job only. Returns a function that puts the
+ * person's own settings back afterwards. Settings this printer doesn't have are skipped.
+ */
+export async function applyForOneJob(printer: string, wanted: Record<string, string>): Promise<() => Promise<void>> {
+  const features = await readPrinterFeatures(printer, true)
+  const changes: Record<string, string> = {}
+  const restore: Record<string, string> = {}
+  for (const [name, option] of Object.entries(wanted)) {
+    const feature = features.find((f) => f.name === name)
+    if (!feature || !feature.options.some((o) => o.name === option) || feature.current === option) continue
+    changes[name] = option
+    if (feature.current) restore[name] = feature.current
+  }
+  if (!Object.keys(changes).length) return async () => {}
+  await writePrinterFeatures(printer, changes)
+  return async () => {
+    await writePrinterFeatures(printer, restore).catch(() => {})
+  }
 }

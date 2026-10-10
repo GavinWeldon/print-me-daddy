@@ -2,36 +2,25 @@ import { useEffect, useState } from 'react'
 import type { AppInfo, PrinterInfo, Settings } from '../../../shared/types'
 import { HotkeyInput } from './HotkeyInput'
 import { PrinterSelect } from './PrinterSelect'
-import { useIndexStatus, usePaperSizes } from '../hooks'
-import { PrintOptionsFields } from './PrintOptionsFields'
-import { PrinterFeatures } from './PrinterFeatures'
+import { useIndexStatus } from '../hooks'
 import { SmartModeField } from './SmartModeField'
 
 interface Props {
   settings: Settings
   printers: PrinterInfo[]
-  onRefreshPrinters: () => void
+  onOpenPrinter: () => void
   onClose: () => void
 }
 
-export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }: Props) {
+export function SettingsPanel({ settings, printers, onOpenPrinter, onClose }: Props) {
   const [name, setName] = useState(settings.hostName)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [info, setInfo] = useState<AppInfo | null>(null)
   const index = useIndexStatus()
-  const paperSizes = usePaperSizes(settings.printerName)
-  const [advanced, setAdvanced] = useState(false)
   const addFolders = async () => {
     const picked = await window.pmd.pickFolders()
     if (picked.length) update({ sourceFolders: [...settings.sourceFolders, ...picked] })
-  }
-  const [testState, setTestState] = useState<{ busy: boolean; message?: string; ok?: boolean }>({ busy: false })
-
-  const printTest = async () => {
-    setTestState({ busy: true, message: 'Sending a test page…' })
-    const result = await window.pmd.printTestPage(settings.printerName)
-    setTestState({ busy: false, ok: result.ok, message: result.ok ? 'Test page sent. Go have a look 💋' : result.error })
   }
 
   useEffect(() => {
@@ -64,59 +53,11 @@ export function SettingsPanel({ settings, printers, onRefreshPrinters, onClose }
 
         <div className="field">
           <span>Printer</span>
-          <div className="row">
-            <PrinterSelect printers={printers} value={settings.printerName} onChange={(printerName) => update({ printerName })} />
-            <button className="icon-btn" title="Look for printers again" onClick={onRefreshPrinters}>
-              ↻
-            </button>
-          </div>
-          <small>
-            {printers.length === 0
-              ? 'No printers found yet. Add one in Windows Settings › Bluetooth & devices › Printers & scanners, then press ↻.'
-              : `${printers.length} printer${printers.length === 1 ? '' : 's'} installed. Each print job can still use a different one.`}
-          </small>
-          <div className="row">
-            <button className="pill-btn small" disabled={testState.busy || printers.length === 0} onClick={printTest}>
-              <span className="crown">♛</span> Print a test page
-            </button>
-          </div>
-          {testState.message && <small className={testState.ok === false ? 'warn' : testState.ok ? 'ok' : ''}>{testState.message}</small>}
-
-          <button type="button" className={`more-toggle ${advanced ? 'is-open' : ''}`} onClick={() => setAdvanced(!advanced)}>
-            {advanced ? '▾' : '▸'} Advanced printer settings
+          <PrinterSelect printers={printers} value={settings.printerName} onChange={(printerName) => update({ printerName })} />
+          <button className="pill-btn" onClick={onOpenPrinter}>
+            <span className="crown">🖨</span> Printer settings & preferences <span className="chev">›</span>
           </button>
-          {advanced && (
-            <div className="advanced">
-              <h3 className="sub-head">Print Me Daddy defaults</h3>
-              <small>
-                Every new print job starts with these. Anything you type (like “in black and white”) or change on a job
-                still wins.
-              </small>
-              <div className="job-settings">
-                <PrintOptionsFields
-                  options={settings.printDefaults}
-                  onChange={(patch) => update({ printDefaults: { ...settings.printDefaults, ...patch } })}
-                  paperSizes={paperSizes}
-                  openMore
-                />
-              </div>
-              <h3 className="sub-head">Your printer’s own settings</h3>
-              <small>Quality, paper type, borderless, ink and everything else this printer offers.</small>
-              <PrinterFeatures printerName={settings.printerName} />
-              <small>Prefer Windows’ own windows? These open them:</small>
-              <div className="row wrap">
-                <button className="ghost-btn small" onClick={() => window.pmd.openPrinterWindow(settings.printerName, 'preferences')}>
-                  Printing preferences
-                </button>
-                <button className="ghost-btn small" onClick={() => window.pmd.openPrinterWindow(settings.printerName, 'properties')}>
-                  Printer properties
-                </button>
-                <button className="ghost-btn small" onClick={() => window.pmd.openPrinterWindow(settings.printerName, 'queue')}>
-                  Print queue
-                </button>
-              </div>
-            </div>
-          )}
+          <small>Quality, paper type, borderless, defaults and test page. Also on the 🖨 button next to ⚙.</small>
         </div>
 
         <div className="field">

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Avatars, ChatState, IndexStatus, PrinterInfo, Settings } from '../../shared/types'
+import type { Avatars, ChatState, IndexStatus, PrinterFeature, PrinterInfo, Settings } from '../../shared/types'
 
 /** Live copy of the conversation, kept in sync with the main process. */
 export function useChat(): ChatState {
@@ -77,4 +77,19 @@ export function usePaperSizes(printerName: string | null): string[] {
     }
   }, [printerName])
   return sizes
+}
+
+/** The printer's own settings (quality, paper type…), kept up to date when they change anywhere. */
+export function usePrinterFeatures(printerName: string | null): { features: PrinterFeature[]; printer?: string; error?: string; loading: boolean; reload: () => void } {
+  const [state, setState] = useState<{ features: PrinterFeature[]; printer?: string; error?: string; loading: boolean }>({ features: [], loading: true })
+  const reload = useCallback(async () => {
+    setState((s) => ({ ...s, loading: true }))
+    const result = await window.pmd.getPrinterFeatures(printerName)
+    setState('error' in result ? { features: [], error: result.error, loading: false } : { features: result.features, printer: result.printer, loading: false })
+  }, [printerName])
+  useEffect(() => {
+    reload()
+    return window.pmd.onPrinterFeaturesChanged(() => reload())
+  }, [reload])
+  return { ...state, reload }
 }

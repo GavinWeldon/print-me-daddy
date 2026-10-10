@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { homedir, tmpdir } from 'os'
 import { dirname, join } from 'path'
 import { applyOptions } from '../../../shared/options'
-import type { SmartStatus } from '../../../shared/types'
+import { BORDERLESS, QUALITY, QUALITY_OPTIONS, type QualityWord } from '../../../shared/printerWords'
+import type { PrintOptions, SmartStatus } from '../../../shared/types'
 import type { SmartPlan, SmartProvider, SmartRequest } from './provider'
 
 // The smart path through Claude Code, run headless ("claude -p").
@@ -29,7 +30,9 @@ const PLAN_SCHEMA = {
         color: { enum: ['color', 'mono'] },
         duplex: { enum: ['off', 'long', 'short'] },
         pages: { type: 'string', description: 'Page ranges like "1-3,5" applied to each file' },
-        pagesPerSheet: { enum: [1, 2, 4, 6, 9] }
+        pagesPerSheet: { enum: [1, 2, 4, 6, 9] },
+        quality: { enum: ['high', 'normal', 'draft'], description: 'Print quality, only if asked (normal = standard)' },
+        borderless: { type: 'boolean', description: 'Only if they asked for borderless / edge-to-edge' }
       }
     },
     merge: { type: 'boolean', description: 'True if they want everything combined into one PDF.' },
@@ -46,7 +49,7 @@ You get a print request and a numbered list of candidate files (name | folder | 
 - Follow the order the person asked for. For "all X", sort naturally (2 before 10).
 - For pairing requests (e.g. "with the solution after each one") match each item to its partner by number/topic and interleave them; skip partners that don't exist and say so.
 - Leave out files they didn't ask for (e.g. solutions, old versions, drafts) unless requested. Prefer the latest version when versions differ by year/number.
-- settings: include only what they explicitly asked for (copies, colour vs black and white, double-sided, page ranges, pages per sheet).
+- settings: include only what they explicitly asked for (copies, colour vs black and white, double-sided, page ranges, pages per sheet, print quality, borderless).
 - merge: true only if they asked for one PDF / combined / merged.
 - reply: 1-2 short sentences as ${hostName}, describing the plan (e.g. "Here's what I've lined up…"). The person reviews it before anything prints, so never say it's printing, sent or merged already. No markdown.
 - If nothing fits, return an empty files list and say so in the reply. Set unsure when you had to guess.`
@@ -69,7 +72,13 @@ export function validatePlan(raw: unknown, candidateCount: number): SmartPlan {
   if (!Array.isArray(r.files)) throw new Error('the answer had no file list')
   const files = r.files.filter((id): id is number => Number.isInteger(id) && (id as number) >= 0 && (id as number) < candidateCount).slice(0, 200)
   if (files.length !== r.files.length) throw new Error('the answer mentioned files that don’t exist')
-  const settings = applyOptions({}, (typeof r.settings === 'object' && r.settings) || {})
+  const rawSettings = ((typeof r.settings === 'object' && r.settings) || {}) as Record<string, unknown>
+  const settings = applyOptions<Partial<PrintOptions>>({}, rawSettings)
+  // Quality and borderless are the printer's own settings: map them to standard print-schema names.
+  const features: Record<string, string> = {}
+  if (typeof rawSettings.quality === 'string' && rawSettings.quality in QUALITY_OPTIONS) features[QUALITY] = QUALITY_OPTIONS[rawSettings.quality as QualityWord]
+  if (rawSettings.borderless === true) features[BORDERLESS] = 'psk:Borderless'
+  if (Object.keys(features).length) settings.printerFeatures = features
   const reply = typeof r.reply === 'string' ? r.reply.replace(/\s+/g, ' ').trim().slice(0, 400) : ''
   return { files, settings, merge: r.merge === true, reply, unsure: r.unsure === true }
 }

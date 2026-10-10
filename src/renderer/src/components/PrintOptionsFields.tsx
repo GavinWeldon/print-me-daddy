@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { PAGES_PER_SHEET, type PrintOptions } from '../../../shared/types'
 
 interface Props {
@@ -11,14 +11,17 @@ interface Props {
   pagesLabel?: string
   /** Start with "More options" open. */
   openMore?: boolean
+  /** Extra controls shown under "More options" (e.g. this job's printer settings). */
+  moreExtra?: ReactNode
 }
 
 /** The print settings controls, shared by job cards, the confirmation pop-up and Settings. */
-export function PrintOptionsFields({ options, onChange, paperSizes, disabled, showPages, pagesLabel = 'Pages', openMore = false }: Props) {
+export function PrintOptionsFields({ options, onChange, paperSizes, disabled, showPages, pagesLabel = 'Pages', openMore = false, moreExtra }: Props) {
   const [more, setMore] = useState(openMore)
   // Keep a chosen paper size visible even if this printer doesn't list it.
   const sizes = options.paperSize && !paperSizes.includes(options.paperSize) ? [options.paperSize, ...paperSizes] : paperSizes
-  const extrasChanged = !!options.paperSize || options.scale !== 'shrink' || options.orientation !== 'auto'
+  const extrasChanged =
+    !!options.paperSize || options.scale !== 'shrink' || options.orientation !== 'auto' || Object.keys(options.printerFeatures ?? {}).length > 0
 
   return (
     <>
@@ -110,6 +113,7 @@ export function PrintOptionsFields({ options, onChange, paperSizes, disabled, sh
               <option value="landscape">Landscape</option>
             </select>
           </label>
+          {moreExtra}
         </>
       )}
     </>

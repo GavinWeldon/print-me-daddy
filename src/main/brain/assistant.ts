@@ -7,6 +7,9 @@ import * as host from '../host/personality'
 import { DEFAULT_PRINT_OPTIONS, type FileHit, type PrintJob, type PrintOptions } from '../../shared/types'
 import { parseRequest, rankFiles, resolveChunk, type ChunkResult, type ParsedRequest } from './fastPath'
 import type { SmartCandidate, SmartProvider } from './smart/provider'
+import { resolvePrinter } from '../print/printers'
+import { readPrinterFeatures, writePrinterFeatures } from '../print/capabilities'
+import { describePrinterFeatures } from '../../shared/printerWords'
 
 const MAX_CANDIDATES = 120
 
@@ -29,6 +32,8 @@ export class Assistant {
   async handle(text: string): Promise<void> {
     const request = parseRequest(text)
     const s = this.settings.get()
+    if (request.settingsCommand && request.options.printerFeatures) return this.changePrinterSettings(request.options.printerFeatures)
+    if (request.asksPrinterSettings) return this.describePrinterSettings()
     if (!request.isPrint) return this.say(host.chitChat())
     if (!s.sourceFolders.length) return this.say(host.needFolders())
 
@@ -124,6 +129,39 @@ export class Assistant {
     const options = { ...request.options, ...plan.settings }
     await this.offer(jobFiles, options, (names, settingsText) => plan.reply || host.planReady(names, settingsText, plan.unsure), false)
     if (plan.merge || request.wantsMerge) this.say(host.mergeLater())
+  }
+
+  // ---------- "Switch to standard quality" ----------
+
+  /** Changes the printer's own settings from now on (same as Printer panel / Printing preferences). */
+  private async changePrinterSettings(wanted: Record<string, string>): Promise<void> {
+    const target = await resolvePrinter(this.settings.get().printerName)
+    if ('error' in target) return this.say(host.printerSettingsFailed(target.error))
+    try {
+      const features = await readPrinterFeatures(target.name, true)
+      const supported = Object.fromEntries(
+        Object.entries(wanted).filter(([name, option]) => features.find((f) => f.name === name)?.options.some((o) => o.name === option))
+      )
+      if (!Object.keys(supported).length) return this.say(host.printerSettingsFailed(`${target.name} doesn't have that setting.`))
+      const kept = await writePrinterFeatures(target.name, supported)
+      const applied = Object.fromEntries(Object.entries(supported).filter(([name, option]) => kept[name] === option))
+      if (!Object.keys(applied).length) return this.say(host.printerSettingsFailed(`${target.name} wouldn't accept that combination.`))
+      this.say(host.printerSettingsChanged(describePrinterFeatures(applied), target.name))
+    } catch (e) {
+      this.say(host.printerSettingsFailed(e instanceof Error ? e.message : String(e)))
+    }
+  }
+
+  private async describePrinterSettings(): Promise<void> {
+    const target = await resolvePrinter(this.settings.get().printerName)
+    if ('error' in target) return this.say(target.error)
+    try {
+      const features = (await readPrinterFeatures(target.name)).filter((f) => f.common)
+      const lines = features.map((f) => `${f.label}: ${f.options.find((o) => o.name === f.current)?.label ?? 'not set'}`)
+      this.say(host.printerSettingsNow(target.name, lines))
+    } catch (e) {
+      this.say(host.printerSettingsFailed(e instanceof Error ? e.message : String(e)))
+    }
   }
 
   // ---------- Shared ----------

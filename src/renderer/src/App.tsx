@@ -7,6 +7,8 @@ import { SettingsPanel } from './components/SettingsPanel'
 import { Splash } from './components/Splash'
 import { ConfirmModal } from './components/ConfirmModal'
 import { DropBox } from './components/DropBox'
+import { PrinterPanel } from './components/PrinterPanel'
+import { QualitySwitch } from './components/QualitySwitch'
 import logoUrl from '../../../assets/brand/logo.webp'
 import printerUrl from '../../../assets/brand/printer.webp'
 
@@ -17,6 +19,7 @@ export default function App() {
   const avatars = useAvatars()
   const { printers, refresh: refreshPrinters, reload: reloadPrinters } = usePrinters()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [printerOpen, setPrinterOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [confirmJobId, setConfirmJobId] = useState<string | null>(null)
   const closeConfirm = useCallback(() => setConfirmJobId(null), [])
@@ -100,6 +103,10 @@ export default function App() {
               <i />
               {HOST_STATUS[chat.hostState]}
             </span>
+            {settings && <QualitySwitch printerName={settings.printerName} />}
+            <button className="icon-btn printer-btn" onClick={() => setPrinterOpen(true)} title="Printer settings & preferences">
+              🖨
+            </button>
             <button className="icon-btn" onClick={() => setSettingsOpen(true)} title="Settings">
               ⚙
             </button>
@@ -129,10 +136,22 @@ export default function App() {
         <ConfirmModal job={chat.jobs[confirmJobId]} printers={printers} hostName={hostName} dragging={dragging} onAddFiles={addFiles} onClose={closeConfirm} />
       )}
 
+      {printerOpen && settings && (
+        <PrinterPanel settings={settings} printers={printers} onRefreshPrinters={refreshPrinters} onClose={() => setPrinterOpen(false)} />
+      )}
+
       {loading && <Splash key={loadingRun} onDone={finishLoading} />}
 
       {settingsOpen && settings && (
-        <SettingsPanel settings={settings} printers={printers} onRefreshPrinters={refreshPrinters} onClose={() => setSettingsOpen(false)} />
+        <SettingsPanel
+          settings={settings}
+          printers={printers}
+          onOpenPrinter={() => {
+            setSettingsOpen(false)
+            setPrinterOpen(true)
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
     </div>
   )
