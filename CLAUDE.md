@@ -31,6 +31,6 @@ Electron + React + TypeScript + Vite (electron-vite) Windows app. Owner is a beg
 - Don't use pdf-to-printer's `getPrinters()`/`getDefaultPrinter()`: they crash on some virtual printers (OneNote). Use `src/main/print/printers.ts`.
 - SumatraPDF must stay unpacked from the asar (`build.asarUnpack` in package.json).
 - Printing logic can be tested without paper by bundling a harness with esbuild (`--external:electron`) and running it with `npx electron`.
-- The owner's Desktop and Start menu shortcuts point at `release/win-unpacked/Print Me Daddy.exe` (made with `npm run pack`). After a phase, quit the app from the tray and re-run `npm run pack` so the shortcuts open the latest version. The real installer comes in Phase 7.
+- The owner's Desktop and Start menu shortcuts point at `release/win-unpacked/Print Me Daddy.exe` (made with `npm run pack`). After a phase, quit the app from the tray and re-run `npm run pack` so the shortcuts open the latest version. Wait until every `Print Me Daddy` process has exited first, or electron-builder fails with EPERM on locked DLLs. The real installer comes in Phase 7.
 - Electron 44 doesn't download its binary on install by itself; the root `postinstall` runs `install-electron`.
 - electron-vite 5 supports Vite up to 7, so don't bump Vite to 8 until electron-vite supports it.
